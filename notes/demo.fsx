@@ -17,6 +17,9 @@ grammar (which is a list of definitions that have names and choice of tokens)
     ] }
 ]*)
 
+
+
+
 // The following is an F# type definition for the above example (roughly)
 type BlockKindName = string
 type PrimitiveType = String | Number
@@ -27,17 +30,21 @@ type BlockElement =
   | ListHole of BlockKindName
 
 type Block = BlockElement list
-type BlockKind = { name:BlockKindName; choice:Block list }
-type BNF = BlockKind list
+type Rule = { name:BlockKindName; choice:Block list }
+type BNFGrammar = Rule list
 
 // Now we can define the grammar of LOGO-like langauge using the above
-let logo : BNF = 
+let logo : BNFGrammar =
   [ { name="<varname>"; choice=[ [ Primitive(String) ] ] }
+
+
     { name="<expr>"; choice=[
         [ Hole("<varname>") ]
         [ Primitive(Number) ]
         [ Hole("<expr>"); Literal("+"); Hole("<expr>") ]
     ]}
+
+
     { name="<program>"; choice=[
         [ ListHole("<cmd>") ]
     ] }
