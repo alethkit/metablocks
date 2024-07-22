@@ -22,3 +22,12 @@
   ],
   "colour": 225
 }
+
+// TODO: needs some sort of blockly plugin for Lists?
+
+// turns out that https://github.com/scratchfoundation/scratch-blocks/tree/develop/blocks_vertical
+// actually has the blockly definitions for actual scratch blocks, so can start from there!
+
+// may require extensions
+
+// try setting up the blockly playground, with selective code borrowing of scratch-blocks
