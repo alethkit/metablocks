@@ -1,0 +1,15 @@
+{
+  "name": "metablocks",
+  "module": "src/index.js",
+  "type": "module",
+    "scripts": {
+      "build": "bun build ./src/index.js --outdir ./build",
+      "start": "bun run --hot server.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
