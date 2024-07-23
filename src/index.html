@@ -1,13 +1,69 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bun Bundler Example</title>
-</head>
-<body>
-    <h1>Hello, Bun!</h1>
-    <div id="app"></div>
-    <script src="index.js"></script>
-</body>
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Blockly Advanced Playground Test</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+    </head>
+    <body>
+        <!--
+    JSPM Generator Import Map
+    Edit URL: https://generator.jspm.io/#U2VhYGDhD80rySzJSU1hSMrJT87OqXQwNNQDQjSuPphbjC6alViWWJxclFlQgi6TW5yun5oHAMUXQtRjAA
+  -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "blockly": "https://ga.jspm.io/npm:blockly@11.1.1/index.mjs",
+                    "blockly/blocks": "https://ga.jspm.io/npm:blockly@11.1.1/blocks.mjs",
+                    "blockly/javascript": "https://ga.jspm.io/npm:blockly@11.1.1/javascript.mjs",
+                    "blockly/msg/en": "https://ga.jspm.io/npm:blockly@11.1.1/msg/en.mjs"
+                },
+                "scopes": {
+                    "https://ga.jspm.io/": {
+                        "blockly/blocks": "https://ga.jspm.io/npm:blockly@11.1.1/blocks_compressed.js",
+                        "blockly/core": "https://ga.jspm.io/npm:blockly@11.1.1/blockly.mjs",
+                        "blockly/msg/en": "https://ga.jspm.io/npm:blockly@11.1.1/msg/en.js"
+                    },
+                    "https://ga.jspm.io/npm:blockly@11.1.1/index.js": {
+                        "blockly/core": "https://ga.jspm.io/npm:blockly@11.1.1/blockly_compressed.js"
+                    }
+                }
+            }
+        </script>
+
+        <h1>Hello!</h1>
+        <div id="blocklyDiv" style="height: 480px; width: 600px"></div>
+
+        <script type="module">
+            import * as Blockly from "blockly";
+            import * as libraryBlocks from "blockly/blocks";
+            import { javascriptGenerator } from "blockly/javascript";
+            import * as En from "blockly/msg/en";
+
+            Blockly.setLocale(En);
+
+            const toolbox = {
+                // There are two kinds of toolboxes. The simpler one is a flyout toolbox.
+                kind: "flyoutToolbox",
+                // The contents is the blocks and other items that exist in your toolbox.
+                contents: [
+                    {
+                        kind: "block",
+                        type: "controls_if",
+                    },
+                    {
+                        kind: "block",
+                        type: "controls_whileUntil",
+                    },
+                    // You can add more blocks to this array.
+                ],
+            };
+
+            // Write main module code here, or as a separate file with a "src" attribute on the module script.
+            console.log(Blockly, libraryBlocks, javascriptGenerator, En);
+            const workspace = Blockly.inject("blocklyDiv", {
+                toolbox: toolbox,
+            });
+        </script>
+    </body>
 </html>
