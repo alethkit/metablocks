@@ -32,38 +32,8 @@
         </script>
 
         <h1>Hello!</h1>
-        <div id="blocklyDiv" style="height: 480px; width: 600px"></div>
+        <div id="blocklyDiv" style="height: 480px; width: 80%;"></>
 
-        <script type="module">
-            import * as Blockly from "blockly";
-            import * as libraryBlocks from "blockly/blocks";
-            import { javascriptGenerator } from "blockly/javascript";
-            import * as En from "blockly/msg/en";
-
-            Blockly.setLocale(En);
-
-            const toolbox = {
-                // There are two kinds of toolboxes. The simpler one is a flyout toolbox.
-                kind: "flyoutToolbox",
-                // The contents is the blocks and other items that exist in your toolbox.
-                contents: [
-                    {
-                        kind: "block",
-                        type: "controls_if",
-                    },
-                    {
-                        kind: "block",
-                        type: "controls_whileUntil",
-                    },
-                    // You can add more blocks to this array.
-                ],
-            };
-
-            // Write main module code here, or as a separate file with a "src" attribute on the module script.
-            console.log(Blockly, libraryBlocks, javascriptGenerator, En);
-            const workspace = Blockly.inject("blocklyDiv", {
-                toolbox: toolbox,
-            });
-        </script>
+        <script type="module" src="index.js"></script>
     </body>
 </html>

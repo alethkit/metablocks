@@ -2,14 +2,20 @@
   "name": "metablocks",
   "module": "src/index.js",
   "type": "module",
-    "scripts": {
-      "build": "bun build ./src/index.js --outdir ./build",
-      "start": "bun run --hot server.js"
+  "scripts": {
+    "build": "bun run build.js",
+    "start": "bun run --hot server.js"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@blockly/dev-tools": "^8.0.4",
+    "@types/bun": "latest",
+    "esbuild": "0.23.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "blockly": "^11.1.1",
+    "esbuild-plugin-polyfill-node": "^0.3.0"
   }
 }
