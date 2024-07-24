@@ -10,10 +10,11 @@ Blockly.setLocale(En);
 // Write main module code here, or as a separate file with a "src" attribute on the module script.
 console.log(Blockly, libraryBlocks, javascriptGenerator, En);
 
-//toolboxCategories.contents += metaBlocksCategory;
+const myToolbox = toolboxCategories;
+myToolbox.contents.push(metaBlocksCategory);
 
 const options = {
-  toolbox: toolboxCategories,
+  toolbox: myToolbox,
 };
 createPlayground(
   document.getElementById("blocklyDiv"),

@@ -1,4 +1,4 @@
-const { file } = require("bun");
+import { file } from "bun";
 
 const server = Bun.serve({
   port: 3000,
