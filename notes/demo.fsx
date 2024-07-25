@@ -21,9 +21,11 @@ grammar (which is a list of definitions that have names and choice of tokens)
 
 
 // The following is an F# type definition for the above example (roughly)
+// Note to self: string being used as atom type from Prolog/Lisp
+
 type BlockKindName = string
 type PrimitiveType = String | Number
-type BlockElement = 
+type BlockElement =
   | Literal of string
   | Primitive of PrimitiveType
   | Hole of BlockKindName
