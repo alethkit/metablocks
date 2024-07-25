@@ -26,10 +26,10 @@ grammar (which is a list of definitions that have names and choice of tokens)
 type BlockKindName = string
 type PrimitiveType = String | Number
 type BlockElement =
-  | Literal of string
-  | Primitive of PrimitiveType
+  | Literal of string // represents "token" i.e what would be a label in constructed block
+  | Primitive of PrimitiveType // would correspond to field (field type would be dependant on primitive type) DROPDOWN FIELD!!!!
   | Hole of BlockKindName
-  | ListHole of BlockKindName
+  | ListHole of BlockKindName // Corresponds to Kleene starred hole
 
 type Block = BlockElement list
 type Rule = { name:BlockKindName; choice:Block list }
