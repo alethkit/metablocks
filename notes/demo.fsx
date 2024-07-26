@@ -18,6 +18,11 @@ grammar (which is a list of definitions that have names and choice of tokens)
 ]*)
 
 
+// Probably good idea to distinguish between disjunctions and conjunctions,
+despite both being represented as lists?
+
+
+// Might need to add dynamic behaaviour connector to rule block proper
 
 
 // The following is an F# type definition for the above example (roughly)
@@ -28,7 +33,7 @@ type PrimitiveType = String | Number
 type BlockElement =
   | Literal of string // represents "token" i.e what would be a label in constructed block
   | Primitive of PrimitiveType // would correspond to field (field type would be dependant on primitive type) DROPDOWN FIELD!!!!
-  | Hole of BlockKindName
+  | Hole of BlockKindName // Not sure what this corresponds to in blockly (typed dropdown of rules variables)
   | ListHole of BlockKindName // Corresponds to Kleene starred hole
 
 type Block = BlockElement list

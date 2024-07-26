@@ -4,8 +4,9 @@ import { javascriptGenerator } from "blockly/javascript";
 import * as En from "blockly/msg/en";
 import { createPlayground, toolboxCategories } from "@blockly/dev-tools";
 import * as BlockDynamicConnection from "@blockly/block-dynamic-connection";
+import { TypedVariableModal } from "@blockly/plugin-typed-variable-modal";
 
-import { category as metaBlocksCategory } from "./blocks";
+import { category as metaBlocksCategory, createFlyout } from "./blocks";
 
 Blockly.setLocale(En);
 
@@ -25,16 +26,37 @@ const options = {
     ),
   },
 };
+
+// Apparently have to finish creating workspace before playground
+//
+function createWorkspace(blocklyDiv, options) {
+  const types = [
+    // Requires having more than one type in here, or else it breaks!
+    ["Rule", "RULE"],
+    ["Dummy", "dummy"],
+  ];
+
+  const workspace = Blockly.inject(blocklyDiv, options);
+  workspace.addChangeListener(BlockDynamicConnection.finalizeConnections);
+  workspace.registerToolboxCategoryCallback(
+    "CREATE_TYPED_VARIABLE",
+    createFlyout,
+  );
+
+  const typedVarModal = new TypedVariableModal(
+    workspace,
+    "CREATE_TYPED_VARIABLE",
+    types,
+  );
+  typedVarModal.init();
+
+  return workspace;
+}
+
 createPlayground(
   document.getElementById("blocklyDiv"),
-  (blocklyDiv, options) => {
-    return Blockly.inject(blocklyDiv, options);
-  },
+  createWorkspace,
   options,
-).then((playground) =>
-  playground
-    .getWorkspace()
-    .addChangeListener(BlockDynamicConnection.finalizeConnections),
 );
 
 BlockDynamicConnection.overrideOldBlockDefinitions();
