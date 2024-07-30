@@ -19,10 +19,10 @@ Blockly.defineBlocksWithJsonArray([
     colour: 225,
   },
   {
-    type: "expr_rule2",
+    type: "rule_block",
     tooltip: "",
     helpUrl: "",
-    message0: "%1 := %2 %3",
+    /*   message0: "%1 := %2 %3",
     args0: [
       {
         type: "field_variable",
@@ -32,7 +32,7 @@ Blockly.defineBlocksWithJsonArray([
         defaultType: "RULE",
       },
       {
-        type: "input_dummy",
+        type: "input_dummy", // this is here to add a second row
         name: "assign_symbol",
       },
       {
@@ -40,14 +40,31 @@ Blockly.defineBlocksWithJsonArray([
         name: "choices",
         check: "Array",
       },
-    ],
+    ],*/
+    mutator: ["dynamic_connector_extension"],
     colour: 225,
+  },
+  {
+    type: "literal_rule",
+    tooltip: "",
+    helpUrl: "",
+    message0: "Literal %1",
+    args0: [
+      {
+        type: "input_value",
+        name: "Rer",
+        check: "String",
+      },
+    ],
+    output: null,
+    colour: 225,
+    inputsInline: true,
   },
   {
     type: "primitive_hole",
     tooltip: "",
     helpUrl: "",
-    message0: "%1 Primitive %2",
+    message0: "%1 Primitive %2", //
     args0: [
       {
         type: "field_dropdown",
@@ -108,7 +125,11 @@ export const category = {
     },
     {
       kind: "BLOCK",
-      type: "expr_rule2",
+      type: "rule_block",
+    },
+    {
+      kind: "BLOCK",
+      type: "literal_rule",
     },
     {
       kind: "BLOCK",
@@ -142,3 +163,216 @@ export const createFlyout = function (workspace) {
   xmlList = xmlList.concat(blockList);
   return xmlList;
 };
+
+const dynamicConnectorMixin = {
+  minInputs: 2,
+
+  /** Count of the item inputs. */
+  itemCount: 0,
+
+  saveExtraState: function () {
+    if (!this.isDeadOrDying() && !this.isCorrectlyFormatted()) {
+      // If we call finalizeConnections here without disabling events, we get into
+      // an event loop.
+      Blockly.Events.disable();
+      this.finalizeConnections();
+      if (this instanceof Blockly.BlockSvg) this.initSvg();
+      Blockly.Events.enable();
+    }
+
+    return {
+      itemCount: this.itemCount,
+    };
+  },
+
+  /**
+   * Applies the given state to this block.
+   *
+   * @param state The state to apply to this block, ie the item count.
+   */
+  loadExtraState: function (state) {
+    this.itemCount = state["itemCount"] ?? 0;
+    // minInputs are added automatically.
+    for (let i = this.minInputs; i < this.itemCount; i++) {
+      this.appendValueInput("OPT" + i);
+    }
+  },
+
+  findInputIndexForConnection: function (connection) {
+    if (
+      !connection.targetConnection ||
+      connection.targetBlock()?.isInsertionMarker()
+    ) {
+      // This connection is available.
+      return null;
+    }
+
+    let connectionIndex = -1;
+    for (let i = 0; i < this.inputList.length; i++) {
+      if (this.inputList[i].connection == connection) {
+        connectionIndex = i;
+      }
+    }
+
+    if (connectionIndex == this.inputList.length - 1) {
+      // This connection is the last one and already has a block in it, so
+      // we should add a new connection at the end.
+      return this.inputList.length + 1;
+    }
+
+    const nextInput = this.inputList[connectionIndex + 1];
+    const nextConnection = nextInput?.connection?.targetConnection;
+    if (
+      nextConnection &&
+      !nextConnection.getSourceBlock().isInsertionMarker()
+    ) {
+      return connectionIndex + 1;
+    }
+
+    // Don't add new connection.
+    return null;
+  },
+
+  /**
+   * Called by a monkey-patched version of InsertionMarkerManager when
+   * a block is dragged over one of the connections on this block.
+   *
+   * @param connection The connection on this block that has a pending
+   *     connection.
+   */
+  onPendingConnection: function (connection) {
+    const insertIndex = this.findInputIndexForConnection(connection);
+    if (insertIndex == null) {
+      return;
+    }
+    this.appendValueInput(`OPT${Blockly.utils.idGenerator.genUid()}`);
+    this.moveNumberedInputBefore(this.inputList.length - 1, insertIndex);
+  },
+
+  /**
+   * Called by a monkey-patched version of InsertionMarkerManager when a block
+   * drag ends if the dragged block had a pending connection with this block.
+   */
+  finalizeConnections: function () {
+    try {
+      const targetConns = this.removeUnnecessaryEmptyConns(
+        this.inputList
+          .filter((input) => input.name !== "assign_symbol")
+          .map((i) => i.connection?.targetConnection),
+      );
+      this.addItemInputs(targetConns);
+      this.itemCount = targetConns.length;
+    } catch (e) {
+      console.error("Error in finalizeConnections:", e);
+      // Attempt to restore the block to a valid state
+      this.addItemInputs([]);
+    }
+  },
+  /** Deletes all inputs (bar the first) on this block so it can be rebuilt. */
+  tearDownBlock: function () {
+    for (let i = this.inputList.length - 1; i >= 0; i--) {
+      this.removeInput(this.inputList[i].name);
+    }
+  },
+
+  /**
+   * Filters the given target connections so that empty connections are removed,
+   * unless we need those to reach the minimum input count. Empty connections
+   * are removed starting at the end of the array.
+   *
+   * @param targetConns The list of connections associated with inputs.
+   * @returns A filtered list of connections (or null/undefined) which should
+   *     be attached to inputs.
+   */
+  removeUnnecessaryEmptyConns: function (targetConns) {
+    const filteredConns = [...targetConns];
+    for (let i = filteredConns.length - 1; i >= 0; i--) {
+      if (!filteredConns[i] && filteredConns.length > this.minInputs) {
+        filteredConns.splice(i, 1);
+      }
+    }
+    return filteredConns;
+  },
+
+  /**
+   * Adds inputs based on the given array of target conns. An input is added for
+   * every entry in the array (if it does not already exist). If the entry is
+   * a connection and not null/undefined the connection will be connected to
+   * the input.
+   *
+   * @param targetConns The connections defining the inputs to add.
+   */
+  // Corrected addItemInputs function
+  addItemInputs: function (targetConns) {
+    if (!Array.isArray(targetConns) || targetConns.length === 0) {
+      console.warn("Invalid targetConns in addItemInputs");
+      return;
+    }
+
+    // Remove all existing inputs except 'assign_symbol'
+    for (let i = this.inputList.length - 1; i >= 0; i--) {
+      if (this.inputList[i].name !== "assign_symbol") {
+        this.removeInput(this.inputList[i].name);
+      }
+    }
+
+    // Ensure 'assign_symbol' input exists
+    if (!this.getInput("assign_symbol")) {
+      this.appendDummyInput("assign_symbol")
+        .appendField(
+          new Blockly.FieldVariable("item", null, ["RULE"], "RULE"),
+          "NAME",
+        )
+        .appendField(":=");
+    }
+
+    for (let i = 0; i < targetConns.length; i++) {
+      const input = this.appendValueInput(`OPT${i}`);
+      const targetConn = targetConns[i];
+      if (targetConn && input && input.connection) {
+        try {
+          input.connection.connect(targetConn);
+        } catch (e) {
+          console.error(`Failed to connect input ${i}:`, e);
+        }
+      }
+    }
+  },
+  /**
+   * Adds the top input with the label to this block.
+   *
+   * @returns The added input.
+   */
+  addFirstInput: function () {
+    // This function should not be needed with the corrected implementation
+    console.warn("addFirstInput called, but should not be necessary");
+  },
+
+  /**
+   * Returns true if all of the inputs on this block are in order.
+   * False otherwise.
+   */
+  isCorrectlyFormatted: function () {
+    for (let i = 0; i < this.inputList.length; i++) {
+      if (this.inputList[i].name !== `OPT${i}`) return false;
+    }
+    return true;
+  },
+};
+
+Blockly.Extensions.registerMutator(
+  "dynamic_connector_extension",
+  dynamicConnectorMixin,
+  function () {
+    this.itemCount = this.minInputs;
+    this.appendDummyInput("assign_symbol")
+      .appendField(
+        new Blockly.FieldVariable("item", null, ["RULE"], "RULE"),
+        "NAME",
+      )
+      .appendField(":=");
+    for (let i = 0; i < this.minInputs; i++) {
+      this.appendValueInput(`OPT${i}`);
+    }
+  },
+);

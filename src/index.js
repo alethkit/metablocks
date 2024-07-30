@@ -19,11 +19,12 @@ myToolbox.contents.push(metaBlocksCategory);
 const options = {
   toolbox: myToolbox,
   plugins: {
-    connectionPreviewer: BlockDynamicConnection.decoratePreviewer(
+    connectionPreviewer: BlockDynamicConnection
+      .decoratePreviewer
       // Replace with a custom connection previewer, or remove to decorate
       // the default one.
-      Blockly.InsertionMarkerPreviewer,
-    ),
+      //Blockly.InsertionMarkerPreviewer,
+      (),
   },
 };
 
@@ -37,7 +38,14 @@ function createWorkspace(blocklyDiv, options) {
   ];
 
   const workspace = Blockly.inject(blocklyDiv, options);
-  workspace.addChangeListener(BlockDynamicConnection.finalizeConnections);
+  workspace.addChangeListener((event) => {
+    try {
+      BlockDynamicConnection.finalizeConnections(event, workspace);
+    } catch (error) {
+      console.error("Error in finalizeConnections:", error);
+    }
+  });
+
   workspace.registerToolboxCategoryCallback(
     "CREATE_TYPED_VARIABLE",
     createFlyout,

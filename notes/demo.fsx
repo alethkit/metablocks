@@ -22,7 +22,7 @@ grammar (which is a list of definitions that have names and choice of tokens)
 despite both being represented as lists?
 
 
-// Might need to add dynamic behaaviour connector to rule block proper
+// Might need to add dynamic behaviour connector to rule block proper
 
 
 // The following is an F# type definition for the above example (roughly)
