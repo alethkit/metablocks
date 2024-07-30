@@ -165,7 +165,7 @@ export const createFlyout = function (workspace) {
 };
 
 const dynamicConnectorMixin = {
-  minInputs: 2,
+  minInputs: 1,
 
   /** Count of the item inputs. */
   itemCount: 0,
