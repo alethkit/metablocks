@@ -1,4 +1,5 @@
 import * as Blockly from "blockly/core";
+import { javascriptGenerator } from "blockly/javascript";
 
 Blockly.defineBlocksWithJsonArray([
   {
@@ -130,6 +131,127 @@ Blockly.defineBlocksWithJsonArray([
     colour: 225,
   },
 ]);
+
+const tokenHandlers = {
+  literal_rule: (block, idNameMap) => ({
+    type: "Literal",
+    value: block.getInputTargetBlock("Rer").getFieldValue("TEXT"),
+  }),
+  primitive_hole: (block) => ({
+    type: "Primitive",
+    value: block.getFieldValue("type_dropdown"),
+  }),
+  block_hole: (block, idNameMap) => ({
+    type: "Hole",
+    value: idNameMap.get(
+      block.getInputTargetBlock("rule_name").getField("VAR").getValue(),
+    ),
+  }),
+  kleene_star: (block, idNameMap) => ({
+    type: "Expr List Hole",
+    value: idNameMap.get(
+      block
+        .getInputTargetBlock("rule_name")
+        .getInputTargetBlock("rule_name")
+        .getField("VAR")
+        .getValue(),
+    ),
+  }),
+  kleene_star_stmt: () => ({ type: "Stmt List Hole", value: 5 }),
+};
+
+// Generates JS code to push block from IR
+function codegenFromIR(prettyRepr) {
+  const starter_template = `javascriptGenerator.forBlock['${block_name}'] = function(block, generator) {
+   ${code}
+  }`;
+  prettyRepr.choices.map((choice) => {});
+}
+
+// Process a single token
+function processToken(block, idNameMap) {
+  const handler = tokenHandlers[block.type];
+  return handler ? handler(block, idNameMap) : null;
+}
+
+// Process inputs for a rule
+function processInputs(block, idNameMap) {
+  return block.inputList
+    .slice(1)
+    .map((input) => {
+      const connectedBlock = input.connection.targetBlock();
+      if (!connectedBlock) return null;
+
+      if (connectedBlock.type === "lists_create_with") {
+        const listBlocks = [];
+        let itemBlock = connectedBlock.getInputTargetBlock("ADD0");
+        let i = 0;
+        while (itemBlock) {
+          listBlocks.push(processToken(itemBlock, idNameMap));
+          i++;
+          itemBlock = connectedBlock.getInputTargetBlock("ADD" + i);
+        }
+        return listBlocks.filter(Boolean);
+      } else {
+        return [processToken(connectedBlock, idNameMap)].filter(Boolean);
+      }
+    })
+    .filter(Boolean);
+}
+
+// Create ID to name mapping
+function createIdNameMap(variables) {
+  return new Map(variables.map((entry) => [entry.id_, entry.name]));
+}
+
+// Process a single rule
+function processRuleBlock(rule, idNameMap) {
+  const ruleName = idNameMap.get(rule.getField("NAME").getValue());
+  const choices = processInputs(rule, idNameMap);
+  return { name: ruleName, choices };
+}
+
+// Add code generation for rule_block
+javascriptGenerator.forBlock["rule_block"] = function (block) {
+  const variables = block.workspace.getAllVariables();
+  const idNameMap = createIdNameMap(variables);
+  const rule = processRuleBlock(block, idNameMap);
+  console.log(rule);
+
+  return JSON.stringify(rule, null, 2);
+};
+
+// Add code generation for literal_rule
+javascriptGenerator.forBlock["literal_rule"] = function (block) {
+  const literal = block.getInputTargetBlock("Rer").getFieldValue("TEXT");
+  return JSON.stringify({ type: "Literal", value: literal });
+};
+
+// Add code generation for primitive_hole
+javascriptGenerator.forBlock["primitive_hole"] = function (block) {
+  const type = block.getFieldValue("type_dropdown");
+  return JSON.stringify({ type: "Primitive", value: type });
+};
+
+// Add code generation for block_hole
+javascriptGenerator.forBlock["block_hole"] = function (block) {
+  const ruleNameBlock = block.getInputTargetBlock("rule_name");
+  const ruleName = ruleNameBlock.getFieldValue("VAR");
+  return JSON.stringify({ type: "Hole", value: ruleName });
+};
+
+// Add code generation for kleene_star
+javascriptGenerator.forBlock["kleene_star"] = function (block) {
+  const ruleNameBlock = block.getInputTargetBlock("rule_name");
+  const holeBlock = ruleNameBlock.getInputTargetBlock("rule_name");
+  const ruleName = holeBlock.getFieldValue("VAR");
+  return JSON.stringify({ type: "Expr List Hole", value: ruleName });
+};
+
+// Add code generation for kleene_star_stmt
+javascriptGenerator.forBlock["kleene_star_stmt"] = function (block) {
+  return JSON.stringify({ type: "Stmt List Hole", value: 5 });
+};
 
 export const category = {
   kind: "CATEGORY",

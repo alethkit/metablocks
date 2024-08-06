@@ -12,7 +12,7 @@ esbuild.build({
   minify: false,
   sourcemap: true,
   platform: "browser",
-  target: ["es2015"],
+  target: ["esnext"],
   plugins: [
     polyfillNode({
       // Options (optional)

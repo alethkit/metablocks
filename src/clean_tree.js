@@ -3,13 +3,6 @@ async function readFile(filePath) {
   if (typeof window !== "undefined") {
     const response = await fetch(filePath);
     return response.text();
-  } else if (typeof Deno !== "undefined") {
-    return Deno.readTextFile(filePath);
-  } else if (typeof Bun !== "undefined") {
-    return Bun.file(filePath).text();
-  } else {
-    const fs = await import("fs/promises");
-    return fs.readFile(filePath, "utf-8");
   }
 }
 
@@ -83,8 +76,4 @@ async function processJSONDump(filePath) {
   return output;
 }
 
-// Usage
-(async () => {
-  const output = await processJSONDump("dump.json");
-  console.log(Bun.inspect(output));
-})();
+export { processRule, processInputs, createIdNameMap };
