@@ -177,3 +177,7 @@ dist
 
 # Ignoring build output
 build/
+.aider*
+
+.vscode
+.zed
