@@ -1,87 +1,90 @@
-async function loadJSONFile(filePath) {
-  let jsonString;
-
+// File system abstraction
+async function readFile(filePath) {
   if (typeof window !== "undefined") {
-    // Browser environment
     const response = await fetch(filePath);
-    jsonString = await response.text();
+    return response.text();
+  } else if (typeof Deno !== "undefined") {
+    return Deno.readTextFile(filePath);
+  } else if (typeof Bun !== "undefined") {
+    return Bun.file(filePath).text();
   } else {
-    // Node.js, Deno, or Bun environment
-    if (typeof Deno !== "undefined") {
-      // Deno
-      jsonString = await Deno.readTextFile(filePath);
-    } else if (typeof Bun !== "undefined") {
-      // Bun
-      jsonString = await Bun.file(filePath).text();
-    } else {
-      // Node.js
-      const fs = await import("fs/promises");
-      jsonString = await fs.readFile(filePath, "utf-8");
-    }
+    const fs = await import("fs/promises");
+    return fs.readFile(filePath, "utf-8");
   }
+}
 
+// JSON file loader
+async function loadJSONFile(filePath) {
+  const jsonString = await readFile(filePath);
   return JSON.parse(jsonString);
 }
 
-var dump = await loadJSONFile("dump.json");
+// Create ID to name mapping
+function createIdNameMap(variables) {
+  return new Map(variables.map((entry) => [entry.id, entry.name]));
+}
 
-let parsed_dump = JSON.parse(dump);
+// Token type handlers
+const tokenHandlers = {
+  literal_rule: (token, idNameMap) => ({
+    type: "Literal",
+    value: token.inputs.Rer.block.fields.TEXT,
+  }),
+  primitive_hole: (token) => ({
+    type: "Primitive",
+    value: token.fields.type_dropdown,
+  }),
+  block_hole: (token, idNameMap) => ({
+    type: "Hole",
+    value: idNameMap.get(token.inputs.rule_name.block.fields.VAR.id),
+  }),
+  kleene_star: (token, idNameMap) => ({
+    type: "Expr List Hole",
+    value: idNameMap.get(
+      token.inputs.rule_name.block.inputs.rule_name.block.fields.VAR.id,
+    ),
+  }),
+  kleene_star_stmt: () => ({ type: "Stmt List Hole", value: 5 }),
+};
 
-let blocklist = parsed_dump.blocks.blocks;
+// Process a single token
+function processToken(token, idNameMap) {
+  const handler = tokenHandlers[token.type];
+  return handler ? handler(token, idNameMap) : null;
+}
 
-let t = new Map(parsed_dump.variables.map(entry => [entry.id, entry.name]));
+// Process inputs for a rule
+function processInputs(inputs, idNameMap) {
+  return Object.entries(inputs).map(([name, content]) => {
+    const unwrap = content.block;
+    const tokenList =
+      unwrap.type === "lists_create_with"
+        ? Object.values(unwrap.inputs).map((x) => x.block)
+        : [content.block];
 
-
-
-let output = blocklist.map(rule => {
-
-  let opts = Object.entries(rule.inputs);
-  let r = rule.fields.NAME.id;  
-  let rule_name = t.get(r);
-
-  let opt_tform = opts.map(([name, content]) => {
-
-    let unwrap = content.block;
-
-
-    let t = content.block.type;
-
-
-
-    let token_list = Array();
-
-    if (t === "lists_create_with") {
-      token_list = Object.values(unwrap.inputs).map(x => x.block);
-    }
-    else {
-      token_list = [content.block];
-    }
-
-    //token_list
-
-
-    let simp = token_list.map(token => {
-
-      switch (token.type) {
-
-        case "literal_rule": { return { type: "Literal", value: token.inputs.Rer.block.fields.TEXT }; }
-        case "primitive_hole": { return { type: "Primitive", value: token.fields.type_dropdown }; }
-        case "block_hole": { return { type: "Hole", value: token.inputs.rule_name.block.fields.VAR.id }; }
-        case "kleene_star": { return { type: "Expr List Hole", value: token.inputs.rule_name.block } }
-        case "kleene_star_stmt": { return { type: "Stmt List Hole", value: 5 } }
-
-      }
-    })
-
-    return simp;
-
+    return tokenList
+      .map((token) => processToken(token, idNameMap))
+      .filter(Boolean);
   });
+}
 
+// Process a single rule
+function processRule(rule, idNameMap) {
+  const ruleName = idNameMap.get(rule.fields.NAME.id);
+  const choices = processInputs(rule.inputs, idNameMap);
+  return { name: ruleName, choices };
+}
 
-  return {"name": rule_name, "choices": opt_tform
-  };
+// Main processing function
+async function processJSONDump(filePath) {
+  const dump = await loadJSONFile(filePath);
+  const idNameMap = createIdNameMap(dump.variables);
+  const output = dump.blocks.blocks.map((rule) => processRule(rule, idNameMap));
+  return output;
+}
 
-});
-
-
-console.log(output);
+// Usage
+(async () => {
+  const output = await processJSONDump("dump.json");
+  console.log(Bun.inspect(output));
+})();

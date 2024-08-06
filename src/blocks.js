@@ -52,7 +52,7 @@ Blockly.defineBlocksWithJsonArray([
     args0: [
       {
         type: "input_value",
-        name: "Rer",
+        name: "Rer", // very unfortunate naming convention, may have to change
         check: "String",
       },
     ],
@@ -113,6 +113,22 @@ Blockly.defineBlocksWithJsonArray([
     output: null,
     colour: 225,
   },
+
+  {
+    type: "kleene_star_stmt",
+    tooltip: "",
+    helpUrl: "",
+    message0: "%1 *stmt",
+    args0: [
+      {
+        type: "input_value",
+        name: "rule_name",
+        check: "block_hole",
+      },
+    ],
+    output: null,
+    colour: 225,
+  },
 ]);
 
 export const category = {
@@ -143,6 +159,11 @@ export const category = {
     {
       kind: "BLOCK",
       type: "kleene_star",
+    },
+
+    {
+      kind: "BLOCK",
+      type: "kleene_star_stmt",
     },
     { kind: "category", name: "Rules", custom: "CREATE_TYPED_VARIABLE" },
   ],

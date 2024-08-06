@@ -1,0 +1,50 @@
+$.blocks.blocks as unsorted array
+
+trying to get to key value pair
+
+for b in $.blocks.blocks :
+
+b.id   -> $.variables.where(@."id"=b.id)    [denormalising variable to get key]   [final is $.blocks.blocks[*].id]
+
+
+(can be done somewhat separately, juts use IDs for now)
+map($.blocks.blocks[*].fields.NAME.id as x ->  $.variables.where(@."id"=x))
+
+
+
+example of single rule:
+
+$.blocks.blocks[<block_id>].inputs["OPT0"].block.inputs["ADD0"] will match a single choice for a given grammar rule
+
+
+{"<rule_name_here>":
+    For each OPT_<i> input:
+    {"opt_{i}": // tagged union, of sorts
+
+        must disambiguate here if input is a list or not
+
+
+        for each ADD_<j> input: // another input
+
+        match ("ADD{j}".block.type) {
+
+            case "literal_rule": return {kind: "Literal"
+                value: ADD{J}".block.inputs.Rer.block.fields.TEXT,
+            case "primitive_hole": return {
+                kind: "Primitive"
+                value: $.blocks.blocks[<block_id>].inputs["OPT{i}"].block.inputs["ADD{j}"].block.fields.type_dropdown
+            }
+            case "block_hole" : // Issue: is this where we need to "push" another Hole's worth onto the stack at some point?
+             return {
+                kind: "Value_Hole",
+                value: (maybe just the immediate type?)
+            }
+            case "list_hole:
+            return {
+
+            }
+
+
+        }
+
+        }

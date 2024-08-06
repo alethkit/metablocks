@@ -61,7 +61,7 @@ function createWorkspace(blocklyDiv, options) {
   return workspace;
 }
 
-createPlayground(
+window.playground = createPlayground(
   document.getElementById("blocklyDiv"),
   createWorkspace,
   options,
