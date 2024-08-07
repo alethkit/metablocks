@@ -6,7 +6,11 @@ import { createPlayground, toolboxCategories } from "@blockly/dev-tools";
 import * as BlockDynamicConnection from "@blockly/block-dynamic-connection";
 import { TypedVariableModal } from "@blockly/plugin-typed-variable-modal";
 
-import { category as metaBlocksCategory, createFlyout } from "./blocks";
+import {
+  category as metaBlocksCategory,
+  createFlyout,
+  interpretBlock,
+} from "./blocks";
 
 Blockly.setLocale(En);
 
@@ -15,6 +19,13 @@ console.log(Blockly, libraryBlocks, javascriptGenerator, En);
 
 const myToolbox = toolboxCategories;
 myToolbox.contents.push(metaBlocksCategory);
+
+const genblocksCategory = {
+  kind: "category",
+  name: "Generated Blocks",
+  custom: "GENERATED_BLOCKS",
+};
+myToolbox.contents.push(genblocksCategory);
 
 const options = {
   toolbox: myToolbox,
@@ -57,7 +68,6 @@ function createWorkspace(blocklyDiv, options) {
     types,
   );
   typedVarModal.init();
-
   return workspace;
 }
 
@@ -68,3 +78,40 @@ window.playground = createPlayground(
 );
 
 BlockDynamicConnection.overrideOldBlockDefinitions();
+
+const ruleSelect = document.getElementById("ruleSelect");
+const interpreterButton = document.getElementById("interpreterButton");
+
+window.playground.then((playground) => {
+  window.ws = playground.getWorkspace();
+  window.ws.getVariablesOfType("RULE").forEach((rule) => {
+    ruleSelect.add(new Option(rule.name, rule.id_));
+  });
+  window.gen_blocks = new Set();
+
+  let genBlockCallback = () => {
+    let x = Array.from(
+      window.gen_blocks.values().map((v) => ({
+        kind: "BLOCK",
+        type: v,
+      })),
+    );
+    console.log("test");
+    console.log(x);
+    return x;
+  };
+  window.ws.registerToolboxCategoryCallback(
+    "GENERATED_BLOCKS",
+    genBlockCallback,
+  );
+});
+
+interpreterButton.addEventListener("click", () => {
+  let selectedBlock = window.ws
+    .getBlocksByType("rule_block")
+    .filter((b) => b.getField("NAME").getValue() === ruleSelect.value)[0];
+  javascriptGenerator.init(window.ws); // Needs to be run first as initialiser???
+  let generatedCode = javascriptGenerator.blockToCode(selectedBlock);
+  console.log(JSON.parse(generatedCode));
+  interpretBlock(JSON.parse(generatedCode), window.gen_blocks);
+});

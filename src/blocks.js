@@ -162,10 +162,66 @@ const tokenHandlers = {
 
 // Generates JS code to push block from IR
 function codegenFromIR(prettyRepr) {
+  let block_name = prettyRepr.name;
+  let code = "";
+
   const starter_template = `javascriptGenerator.forBlock['${block_name}'] = function(block, generator) {
+
    ${code}
   }`;
+
+  // let object =
+  //  const choice_template = `Blockly.Blocks['${choice_name}'] = {
+  //    init: function() {
+
+  //   }
+  //  };`
+
   prettyRepr.choices.map((choice) => {});
+}
+
+// given the nice IR, directly create blocks!
+export function interpretBlock(prettyRepr, blockSet) {
+  prettyRepr.choices.forEach((choice, i) => {
+    let block_name = `${prettyRepr.name}_c${i}`;
+    Blockly.Blocks[block_name] = {
+      init: function () {
+        let inpCount = 1;
+        let curInput = this.appendDummyInput(`inp${inpCount}`);
+
+        choice.forEach((token, j) => {
+          switch (token.type) {
+            case "Literal": {
+              curInput.appendField(token.value, `tok_${j}_literal`);
+            }
+            case "Primitive": {
+              if (token.value === "Str") {
+                curInput.appendField(
+                  new Blockly.FieldTextInput(""),
+                  `tok_${j}_string_primitive`,
+                );
+              } else {
+                curInput.appendField(
+                  new Blockly.FieldNumber(0),
+                  `tok_${j}_number_primitive`,
+                );
+              }
+            }
+            case "Hole": {
+              inpCount++;
+              curInput = this.appendValueInput(`inp${inpCount}`);
+            }
+            case "Expr List Hole": {
+              inpCount++;
+              curInput = this.appendValueInput(`inp${inpCount}`);
+              curInput.setCheck("Array");
+            }
+          }
+        });
+      },
+    };
+    blockSet.add(block_name);
+  });
 }
 
 // Process a single token
@@ -216,8 +272,6 @@ javascriptGenerator.forBlock["rule_block"] = function (block) {
   const variables = block.workspace.getAllVariables();
   const idNameMap = createIdNameMap(variables);
   const rule = processRuleBlock(block, idNameMap);
-  console.log(rule);
-
   return JSON.stringify(rule, null, 2);
 };
 
