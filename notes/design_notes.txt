@@ -1,0 +1,8 @@
+seems that having a separate mode to instantiate variables as symbols is the way to go,
+rather than having to deal with typing text at the block level
+
+
+ideal modal fr param case would be pop up add, text box howimg new varanle pos, and then new variable bloc showin up
+
+
+problem with dropdowns: you might not realsie dropdown value vhanged and spend 10 mins trying to debug!

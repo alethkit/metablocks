@@ -110,8 +110,9 @@ interpreterButton.addEventListener("click", () => {
   let selectedBlock = window.ws
     .getBlocksByType("rule_block")
     .filter((b) => b.getField("NAME").getValue() === ruleSelect.value)[0];
+  console.log(selectedBlock);
   javascriptGenerator.init(window.ws); // Needs to be run first as initialiser???
   let generatedCode = javascriptGenerator.blockToCode(selectedBlock);
-  console.log(JSON.parse(generatedCode));
+  console.log(generatedCode);
   interpretBlock(JSON.parse(generatedCode), window.gen_blocks);
 });

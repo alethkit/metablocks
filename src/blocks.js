@@ -101,33 +101,33 @@ Blockly.defineBlocksWithJsonArray([
 
   {
     type: "kleene_star",
-    tooltip: "",
+    tooltip: "Kleene star operator for expressions",
     helpUrl: "",
     message0: "%1 *",
     args0: [
       {
         type: "input_value",
         name: "rule_name",
-        check: "block_hole",
+        check: "RULE",
       },
     ],
-    output: null,
+    output: "RULE",
     colour: 225,
   },
 
   {
     type: "kleene_star_stmt",
-    tooltip: "",
+    tooltip: "Kleene star operator for statements",
     helpUrl: "",
     message0: "%1 *stmt",
     args0: [
       {
         type: "input_value",
         name: "rule_name",
-        check: "block_hole",
+        check: "RULE",
       },
     ],
-    output: null,
+    output: "RULE",
     colour: 225,
   },
 ]);
@@ -160,63 +160,119 @@ const tokenHandlers = {
   kleene_star_stmt: () => ({ type: "Stmt List Hole", value: 5 }),
 };
 
-// Generates JS code to push block from IR
-function codegenFromIR(prettyRepr) {
-  let block_name = prettyRepr.name;
-  let code = "";
-
-  const starter_template = `javascriptGenerator.forBlock['${block_name}'] = function(block, generator) {
-
-   ${code}
-  }`;
-
-  // let object =
-  //  const choice_template = `Blockly.Blocks['${choice_name}'] = {
-  //    init: function() {
-
-  //   }
-  //  };`
-
-  prettyRepr.choices.map((choice) => {});
-}
-
 // given the nice IR, directly create blocks!
 export function interpretBlock(prettyRepr, blockSet) {
   prettyRepr.choices.forEach((choice, i) => {
     let block_name = `${prettyRepr.name}_c${i}`;
     Blockly.Blocks[block_name] = {
       init: function () {
-        let inpCount = 1;
-        let curInput = this.appendDummyInput(`inp${inpCount}`);
+        let lastInput = null;
 
         choice.forEach((token, j) => {
           switch (token.type) {
             case "Literal": {
-              curInput.appendField(token.value, `tok_${j}_literal`);
+              lastInput = this.appendDummyInput().appendField(
+                token.value,
+                `tok_${j}_literal`,
+              );
+              break;
             }
             case "Primitive": {
               if (token.value === "Str") {
-                curInput.appendField(
-                  new Blockly.FieldTextInput(""),
-                  `tok_${j}_string_primitive`,
-                );
+                lastInput = this.appendDummyInput(`tok_${j}_string_primitive`)
+                  //   .appendField("String")
+                  .appendField(
+                    new Blockly.FieldVariable("test-var"),
+                    `tok_${j}_string_value`,
+                  );
               } else {
-                curInput.appendField(
-                  new Blockly.FieldNumber(0),
-                  `tok_${j}_number_primitive`,
-                );
+                lastInput = this.appendValueInput(`tok_${j}_number_primitive`)
+                  .setCheck("Number")
+                  .appendField(
+                    new Blockly.FieldNumber(0),
+                    `tok_${j}_number_value`,
+                  );
               }
+              break;
             }
             case "Hole": {
-              inpCount++;
-              curInput = this.appendValueInput(`inp${inpCount}`);
+              lastInput = this.appendValueInput(`tok_${j}_hole`).setCheck(
+                "RULE",
+              );
+              break;
             }
             case "Expr List Hole": {
-              inpCount++;
-              curInput = this.appendValueInput(`inp${inpCount}`);
-              curInput.setCheck("Array");
+              lastInput = this.appendValueInput(`tok_${j}_expr_list_hole`)
+                .setCheck("Array")
+                .appendField("*");
+              break;
+            }
+            case "Stmt List Hole": {
+              lastInput = this.appendStatementInput(
+                `tok_${j}_stmt_list_hole`,
+              ).appendField("*stmt");
+              break;
             }
           }
+        });
+
+        // If the block is empty, add a dummy input to make it visible
+        if (!lastInput) {
+          this.appendDummyInput();
+        }
+
+        this.setOutput(true, "RULE");
+        this.setColour(225);
+        this.setTooltip(
+          `${prettyRepr.name} (Choice ${i + 1}): ${this.generateTooltip(choice)}`,
+        );
+
+        // Add initialization for Kleene star inputs
+        this.setOnChange(function (changeEvent) {
+          if (changeEvent.type === Blockly.Events.BLOCK_MOVE) {
+            this.initKleeneStarInputs();
+          }
+        });
+      },
+
+      generateTooltip: function (tokens) {
+        return tokens
+          .map((token) => {
+            switch (token.type) {
+              case "Literal":
+                return `Literal: "${token.value}"`;
+              case "Primitive":
+                return `${token.value} Primitive`;
+              case "Hole":
+                return "Hole";
+              case "Expr List Hole":
+                return "Expression List";
+              case "Stmt List Hole":
+                return "Statement List";
+              default:
+                return token.type;
+            }
+          })
+          .join(", ");
+      },
+
+      initKleeneStarInputs: function () {
+        this.inputList.forEach((input) => {
+          if (input.name.includes("expr_list_hole")) {
+            if (!input.connection.targetConnection) {
+              const listBlock = this.workspace.newBlock("lists_create_with");
+              listBlock.initSvg();
+              listBlock.render();
+              input.connection.connect(listBlock.outputConnection);
+            }
+          } //else if (input.name.includes('stmt_list_hole')) {
+          //       if (!input.connection.targetConnection) {
+          //        const statementsBlock = this.workspace.newBlock('controls_repeat_ext');
+          //        statementsBlock.initSvg();
+          //        statementsBlock.render();
+          //       input.connection.connect(statementsBlock.previousConnection);
+          //      }
+          //     }
         });
       },
     };
@@ -272,6 +328,8 @@ javascriptGenerator.forBlock["rule_block"] = function (block) {
   const variables = block.workspace.getAllVariables();
   const idNameMap = createIdNameMap(variables);
   const rule = processRuleBlock(block, idNameMap);
+  console.log("aaaaa");
+  console.log(rule);
   return JSON.stringify(rule, null, 2);
 };
 
@@ -297,14 +355,31 @@ javascriptGenerator.forBlock["block_hole"] = function (block) {
 // Add code generation for kleene_star
 javascriptGenerator.forBlock["kleene_star"] = function (block) {
   const ruleNameBlock = block.getInputTargetBlock("rule_name");
-  const holeBlock = ruleNameBlock.getInputTargetBlock("rule_name");
-  const ruleName = holeBlock.getFieldValue("VAR");
-  return JSON.stringify({ type: "Expr List Hole", value: ruleName });
+  const ruleName = ruleNameBlock
+    ? javascriptGenerator.valueToCode(
+        block,
+        "rule_name",
+        javascriptGenerator.ORDER_ATOMIC,
+      )
+    : null;
+  return JSON.stringify({
+    type: "Kleene Star",
+    value: ruleName,
+    isStmt: false,
+  });
 };
 
 // Add code generation for kleene_star_stmt
 javascriptGenerator.forBlock["kleene_star_stmt"] = function (block) {
-  return JSON.stringify({ type: "Stmt List Hole", value: 5 });
+  const ruleNameBlock = block.getInputTargetBlock("rule_name");
+  const ruleName = ruleNameBlock
+    ? javascriptGenerator.valueToCode(
+        block,
+        "rule_name",
+        javascriptGenerator.ORDER_ATOMIC,
+      )
+    : null;
+  return JSON.stringify({ type: "Kleene Star", value: ruleName, isStmt: true });
 };
 
 export const category = {
