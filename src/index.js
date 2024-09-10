@@ -5,11 +5,14 @@ import * as En from "blockly/msg/en";
 import { createPlayground, toolboxCategories } from "@blockly/dev-tools";
 import * as BlockDynamicConnection from "@blockly/block-dynamic-connection";
 import { TypedVariableModal } from "@blockly/plugin-typed-variable-modal";
+import "./renderer";
 
 import {
   category as metaBlocksCategory,
+  rulesCat,
   createFlyout,
   interpretBlock,
+  interpretYuckyBlock,
 } from "./blocks";
 
 Blockly.setLocale(En);
@@ -19,6 +22,7 @@ console.log(Blockly, libraryBlocks, javascriptGenerator, En);
 
 const myToolbox = toolboxCategories;
 myToolbox.contents.push(metaBlocksCategory);
+myToolbox.contents.push(rulesCat);
 
 const genblocksCategory = {
   kind: "category",
@@ -28,6 +32,7 @@ const genblocksCategory = {
 myToolbox.contents.push(genblocksCategory);
 
 const options = {
+  renderer: "custom_renderer",
   toolbox: myToolbox,
   plugins: {
     connectionPreviewer: BlockDynamicConnection
@@ -81,10 +86,11 @@ BlockDynamicConnection.overrideOldBlockDefinitions();
 
 const ruleSelect = document.getElementById("ruleSelect");
 const interpreterButton = document.getElementById("interpreterButton");
+const refreshButton = document.getElementById("refreshButton");
 
 window.playground.then((playground) => {
   window.ws = playground.getWorkspace();
-  window.ws.getVariablesOfType("RULE").forEach((rule) => {
+  window.ws.getAllVariables().forEach((rule) => {
     ruleSelect.add(new Option(rule.name, rule.id_));
   });
   window.gen_blocks = new Set();
@@ -106,13 +112,28 @@ window.playground.then((playground) => {
   );
 });
 
+refreshButton.addEventListener("click", () => {
+  ruleSelect.textContent = "";
+  window.ws.getAllVariables().forEach((rule) => {
+    ruleSelect.add(new Option(rule.name, rule.id_));
+  });
+});
+
+// do the generated l2 blocks from l3 defs have the necessary codegen to be interpreted?
+// lol, just have 2 dropdown fields
 interpreterButton.addEventListener("click", () => {
-  let selectedBlock = window.ws
-    .getBlocksByType("rule_block")
-    .filter((b) => b.getField("NAME").getValue() === ruleSelect.value)[0];
-  console.log(selectedBlock);
+  let selectedBlock = window.ws.getAllBlocks().find((b) => {
+    let chosenField = b.getField("NAME") || b.getField("tok_0_string_value");
+    return chosenField.getValue() === ruleSelect.value;
+  });
+  //console.log(selectedBlock);
   javascriptGenerator.init(window.ws); // Needs to be run first as initialiser???
-  let generatedCode = javascriptGenerator.blockToCode(selectedBlock);
-  console.log(generatedCode);
-  interpretBlock(JSON.parse(generatedCode), window.gen_blocks);
+  try {
+    let generatedCode = javascriptGenerator.blockToCode(selectedBlock);
+    console.log(generatedCode);
+    interpretBlock(JSON.parse(generatedCode), window.gen_blocks);
+  } catch (err) {
+    console.log(err);
+    interpretYuckyBlock(selectedBlock, window.gen_blocks);
+  }
 });

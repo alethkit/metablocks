@@ -1,8 +1,37 @@
 import * as Blockly from "blockly/core";
 import { javascriptGenerator } from "blockly/javascript";
 
+// Shape casting
+//
 Blockly.defineBlocksWithJsonArray([
   {
+    type: "circ_to_trig_cast",
+    message0: "%1",
+    args0: [
+      {
+        type: "input_value",
+        name: "circ-in",
+        check: ["circ-meta"],
+      },
+    ],
+    output: "trig-meta",
+  },
+  {
+    type: "trig_to_circ_cast",
+    message0: "%1",
+    args0: [
+      {
+        type: "input_value",
+        name: "trig-in",
+        check: ["trig-meta"],
+      },
+    ],
+    output: "circ-meta",
+  },
+]);
+
+Blockly.defineBlocksWithJsonArray([
+  /*  {
     type: "expr_rule",
     tooltip: "test block for examples!",
     helpUrl: "",
@@ -18,7 +47,7 @@ Blockly.defineBlocksWithJsonArray([
       },
     ],
     colour: 225,
-  },
+  },*/
   {
     type: "rule_block",
     tooltip: "",
@@ -73,6 +102,7 @@ Blockly.defineBlocksWithJsonArray([
         options: [
           ["String", "Str"],
           ["Number", "Num"],
+          ["Shape", "Shp"],
         ],
       },
       {
@@ -160,6 +190,12 @@ const tokenHandlers = {
   kleene_star_stmt: () => ({ type: "Stmt List Hole", value: 5 }),
 };
 
+export function interpretYuckyBlock(uglyRepr, blockSet) {
+  //given normal Blockly representation, directly create blocks.
+  for (const item of uglyRepr.inputList[2].connection.targetBlock().inputList) {
+    console.log(item);
+  }
+}
 // given the nice IR, directly create blocks!
 export function interpretBlock(prettyRepr, blockSet) {
   prettyRepr.choices.forEach((choice, i) => {
@@ -182,12 +218,19 @@ export function interpretBlock(prettyRepr, blockSet) {
                 lastInput = this.appendDummyInput(`tok_${j}_string_primitive`)
                   //   .appendField("String")
                   .appendField(
-                    new Blockly.FieldVariable("test-var"),
+                    new Blockly.FieldTextInput("test-var"),
                     `tok_${j}_string_value`,
                   );
-              } else {
+              } else if (token.value === "Num") {
                 lastInput = this.appendValueInput(`tok_${j}_number_primitive`)
                   .setCheck("Number")
+                  .appendField(
+                    new Blockly.FieldNumber(0),
+                    `tok_${j}_number_value`,
+                  );
+              } else if (token.value === "Shp") {
+                lastInput = this.appendValueInput(`tok_${j}_shape_primitive`)
+                  .setCheck("Shape")
                   .appendField(
                     new Blockly.FieldNumber(0),
                     `tok_${j}_number_value`,
@@ -305,7 +348,8 @@ function processInputs(block, idNameMap) {
         }
         return listBlocks.filter(Boolean);
       } else {
-        return [processToken(connectedBlock, idNameMap)].filter(Boolean);
+        let t = [processToken(connectedBlock, idNameMap)];
+        return t.filter(Boolean);
       }
     })
     .filter(Boolean);
@@ -386,10 +430,13 @@ export const category = {
   kind: "CATEGORY",
   name: "MetaBlocks",
   contents: [
-    {
-      kind: "BLOCK",
-      type: "expr_rule",
-    },
+    { kind: "BLOCK", type: "circ_to_trig_cast" },
+    { kind: "BLOCK", type: "trig_to_circ_cast" },
+
+    //    {
+    //      kind: "BLOCK",
+    //     type: "expr_rule",
+    //   },
     {
       kind: "BLOCK",
       type: "rule_block",
@@ -416,9 +463,15 @@ export const category = {
       kind: "BLOCK",
       type: "kleene_star_stmt",
     },
-    { kind: "category", name: "Rules", custom: "CREATE_TYPED_VARIABLE" },
+    //    { kind: "category", name: "Rules", custom: "CREATE_TYPED_VARIABLE" },
   ],
   colour: 70,
+};
+
+export const rulesCat = {
+  kind: "category",
+  name: "Rules",
+  custom: "CREATE_TYPED_VARIABLE",
 };
 
 export const createFlyout = function (workspace) {
