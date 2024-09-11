@@ -124,6 +124,7 @@ refreshButton.addEventListener("click", () => {
 interpreterButton.addEventListener("click", () => {
   let selectedBlock = window.ws.getAllBlocks().find((b) => {
     let chosenField = b.getField("NAME") || b.getField("tok_0_string_value");
+    console.error(chosenField.getValue);
     return chosenField.getValue() === ruleSelect.value;
   });
   //console.log(selectedBlock);

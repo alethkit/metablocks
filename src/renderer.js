@@ -168,27 +168,26 @@ class CustomConstantProvider extends Blockly.blockRendering.ConstantProvider {
     switch (connection.type) {
       case Blockly.INPUT_VALUE:
       case Blockly.OUTPUT_VALUE:
-        if (
-          checks &&
-          (checks.includes("Number") || checks.includes("rect-meta"))
-        ) {
+        if (checks && checks.includes("rect-meta")) {
           return this.RECT_INPUT_OUTPUT;
         }
-        if (
-          checks &&
-          (checks.includes("String") || checks.includes("trig-meta"))
-        ) {
+        if (checks && checks.includes("trig-meta")) {
           return this.TRIG_INPUT_OUTPUT;
         }
         if (checks && checks.includes("circ-meta")) {
           return this.CIRC_INPUT_OUTPUT;
+        }
+        if (checks && checks.includes("Number")) {
+          return this.RECT_INPUT_OUTPUT;
+        }
+        if (checks && checks.includes("String")) {
+          return this.TRIG_INPUT_OUTPUT;
         }
         return this.PUZZLE_TAB;
       case Blockly.PREVIOUS_STATEMENT:
       case Blockly.NEXT_STATEMENT:
         return this.NOTCH;
       default:
-        S;
         throw Error("Unknown connection type");
     }
   }

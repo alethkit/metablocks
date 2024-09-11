@@ -30,30 +30,55 @@ Blockly.defineBlocksWithJsonArray([
   },
 ]);
 
+const square_token = {
+  init: function () {
+    this.appendDummyInput("NAME").appendField("Square");
+    this.setInputsInline(true);
+    this.setOutput(true, null);
+    this.setTooltip("");
+    this.setHelpUrl("");
+    this.setColour(200);
+  },
+};
+
+const triangle_token = {
+  init: function () {
+    this.appendDummyInput("NAME").appendField("Triangle");
+    this.setInputsInline(true);
+    this.setOutput(true, null);
+    this.setTooltip("");
+    this.setHelpUrl("");
+    this.setColour(200);
+  },
+};
+const circle_token = {
+  init: function () {
+    this.appendDummyInput("NAME").appendField("Circle");
+    this.setInputsInline(true);
+    this.setOutput(true, null);
+    this.setTooltip("");
+    this.setHelpUrl("");
+    this.setColour(200);
+  },
+};
+
+Blockly.common.defineBlocks({
+  square_token: square_token,
+  triangle_token: triangle_token,
+  circle_token: circle_token,
+});
+
 Blockly.defineBlocksWithJsonArray([
-  /*  {
-    type: "expr_rule",
-    tooltip: "test block for examples!",
-    helpUrl: "",
-    message0: "%1 := %2",
-    args0: [
-      {
-        type: "field_variable", //will use variables as de-facto atom types for now
-        name: "rule_name",
-      },
-      {
-        type: "input_statement",
-        name: "choice",
-      },
-    ],
-    colour: 225,
-  },*/
   {
     type: "rule_block",
     tooltip: "",
     helpUrl: "",
     /*   message0: "%1 := %2 %3",
     args0: [
+      {
+        type: "input_value",
+        name: "SHAPE",
+      },
       {
         type: "field_variable",
         name: "NAME",
@@ -62,7 +87,7 @@ Blockly.defineBlocksWithJsonArray([
         defaultType: "RULE",
       },
       {
-        type: "input_dummy", // this is here to add a second row
+        type: "input_dummy",
         name: "assign_symbol",
       },
       {
@@ -222,19 +247,16 @@ export function interpretBlock(prettyRepr, blockSet) {
                     `tok_${j}_string_value`,
                   );
               } else if (token.value === "Num") {
-                lastInput = this.appendValueInput(`tok_${j}_number_primitive`)
-                  .setCheck("Number")
-                  .appendField(
-                    new Blockly.FieldNumber(0),
-                    `tok_${j}_number_value`,
-                  );
+                lastInput = this.appendDummyInput(
+                  `tok_${j}_number_primitive`,
+                ).appendField(
+                  new Blockly.FieldNumber(0),
+                  `tok_${j}_number_value`,
+                );
               } else if (token.value === "Shp") {
-                lastInput = this.appendValueInput(`tok_${j}_shape_primitive`)
-                  .setCheck("Shape")
-                  .appendField(
-                    new Blockly.FieldNumber(0),
-                    `tok_${j}_number_value`,
-                  );
+                lastInput = this.appendValueInput(
+                  `tok_${j}_shape_primitive`,
+                ).setCheck("Shape");
               }
               break;
             }
@@ -264,7 +286,7 @@ export function interpretBlock(prettyRepr, blockSet) {
           this.appendDummyInput();
         }
 
-        this.setOutput(true, "RULE");
+        this.setOutput(true, ["RULE", prettyRepr.shape]);
         this.setColour(225);
         this.setTooltip(
           `${prettyRepr.name} (Choice ${i + 1}): ${this.generateTooltip(choice)}`,
@@ -332,7 +354,7 @@ function processToken(block, idNameMap) {
 // Process inputs for a rule
 function processInputs(block, idNameMap) {
   return block.inputList
-    .slice(1)
+    .slice(2)
     .map((input) => {
       const connectedBlock = input.connection.targetBlock();
       if (!connectedBlock) return null;
@@ -362,9 +384,24 @@ function createIdNameMap(variables) {
 
 // Process a single rule
 function processRuleBlock(rule, idNameMap) {
-  const ruleName = idNameMap.get(rule.getField("NAME").getValue());
+  const ruleName = idNameMap.get(rule.getFieldValue("NAME"));
+  const shapeBlock = rule.getInputTargetBlock("SHAPE");
+  let shape = null; // Default to puzzle tab if no shape is connected
+  if (shapeBlock) {
+    switch (shapeBlock.type) {
+      case "square_token":
+        shape = "rect-meta";
+        break;
+      case "triangle_token":
+        shape = "trig-meta";
+        break;
+      case "circle_token":
+        shape = "circ-meta";
+        break;
+    }
+  }
   const choices = processInputs(rule, idNameMap);
-  return { name: ruleName, choices };
+  return { name: ruleName, shape, choices };
 }
 
 // Add code generation for rule_block
@@ -372,8 +409,7 @@ javascriptGenerator.forBlock["rule_block"] = function (block) {
   const variables = block.workspace.getAllVariables();
   const idNameMap = createIdNameMap(variables);
   const rule = processRuleBlock(block, idNameMap);
-  console.log("aaaaa");
-  console.log(rule);
+  console.log("Rule block processed:", rule);
   return JSON.stringify(rule, null, 2);
 };
 
@@ -432,38 +468,15 @@ export const category = {
   contents: [
     { kind: "BLOCK", type: "circ_to_trig_cast" },
     { kind: "BLOCK", type: "trig_to_circ_cast" },
-
-    //    {
-    //      kind: "BLOCK",
-    //     type: "expr_rule",
-    //   },
-    {
-      kind: "BLOCK",
-      type: "rule_block",
-    },
-    {
-      kind: "BLOCK",
-      type: "literal_rule",
-    },
-    {
-      kind: "BLOCK",
-      type: "primitive_hole",
-    },
-    {
-      kind: "BLOCK",
-      type: "block_hole",
-    },
-
-    {
-      kind: "BLOCK",
-      type: "kleene_star",
-    },
-
-    {
-      kind: "BLOCK",
-      type: "kleene_star_stmt",
-    },
-    //    { kind: "category", name: "Rules", custom: "CREATE_TYPED_VARIABLE" },
+    { kind: "BLOCK", type: "square_token" },
+    { kind: "BLOCK", type: "triangle_token" },
+    { kind: "BLOCK", type: "circle_token" },
+    { kind: "BLOCK", type: "rule_block" },
+    { kind: "BLOCK", type: "literal_rule" },
+    { kind: "BLOCK", type: "primitive_hole" },
+    { kind: "BLOCK", type: "block_hole" },
+    { kind: "BLOCK", type: "kleene_star" },
+    { kind: "BLOCK", type: "kleene_star_stmt" },
   ],
   colour: 70,
 };
@@ -570,6 +583,10 @@ const dynamicConnectorMixin = {
     if (insertIndex == null) {
       return;
     }
+    if (connection === this.getInput("SHAPE").connection) {
+      // Don't add a new input for the shape connection
+      return;
+    }
     this.appendValueInput(`OPT${Blockly.utils.idGenerator.genUid()}`);
     this.moveNumberedInputBefore(this.inputList.length - 1, insertIndex);
   },
@@ -580,17 +597,29 @@ const dynamicConnectorMixin = {
    */
   finalizeConnections: function () {
     try {
+      const shapeInput = this.getInput("SHAPE");
+      const shapeConn = shapeInput
+        ? shapeInput.connection.targetConnection
+        : null;
       const targetConns = this.removeUnnecessaryEmptyConns(
         this.inputList
-          .filter((input) => input.name !== "assign_symbol")
+          .filter(
+            (input) => input.name !== "assign_symbol" && input.name !== "SHAPE",
+          )
           .map((i) => i.connection?.targetConnection),
       );
-      this.addItemInputs(targetConns);
+      this.addItemInputs(targetConns, shapeConn);
       this.itemCount = targetConns.length;
+
+      // Set the output type to null if there's no shape connected
+      if (!shapeConn) {
+        this.setOutput(true, null);
+      }
     } catch (e) {
       console.error("Error in finalizeConnections:", e);
       // Attempt to restore the block to a valid state
-      this.addItemInputs([]);
+      this.addItemInputs([], null);
+      this.setOutput(true, null);
     }
   },
   /** Deletes all inputs (bar the first) on this block so it can be rebuilt. */
@@ -628,26 +657,36 @@ const dynamicConnectorMixin = {
    * @param targetConns The connections defining the inputs to add.
    */
   // Corrected addItemInputs function
-  addItemInputs: function (targetConns) {
-    if (!Array.isArray(targetConns) || targetConns.length === 0) {
+  addItemInputs: function (targetConns, shapeConn) {
+    if (!Array.isArray(targetConns)) {
       console.warn("Invalid targetConns in addItemInputs");
       return;
     }
 
-    // Remove all existing inputs except 'assign_symbol'
+    // Remove all existing inputs except 'SHAPE' and 'assign_symbol'
     for (let i = this.inputList.length - 1; i >= 0; i--) {
-      if (this.inputList[i].name !== "assign_symbol") {
+      if (
+        this.inputList[i].name !== "assign_symbol" &&
+        this.inputList[i].name !== "SHAPE"
+      ) {
         this.removeInput(this.inputList[i].name);
       }
+    }
+
+    // Ensure 'SHAPE' input exists
+    if (!this.getInput("SHAPE")) {
+      this.appendValueInput("SHAPE").appendField("Shape:");
+    }
+
+    // Connect shape if provided, otherwise keep the SHAPE input as a placeholder
+    if (shapeConn && this.getInput("SHAPE").connection) {
+      this.getInput("SHAPE").connection.connect(shapeConn);
     }
 
     // Ensure 'assign_symbol' input exists
     if (!this.getInput("assign_symbol")) {
       this.appendDummyInput("assign_symbol")
-        .appendField(
-          new Blockly.FieldVariable("item", null, ["RULE"], "RULE"),
-          "NAME",
-        )
+        .appendField(new Blockly.FieldTextInput("ruleName"), "NAME")
         .appendField(":=");
     }
 
@@ -661,6 +700,26 @@ const dynamicConnectorMixin = {
           console.error(`Failed to connect input ${i}:`, e);
         }
       }
+    }
+
+    // Set the output type based on the shape connection
+    if (shapeConn) {
+      const shapeType = shapeConn.getSourceBlock().type;
+      switch (shapeType) {
+        case "square_token":
+          this.setOutput(true, "rect-meta");
+          break;
+        case "triangle_token":
+          this.setOutput(true, "trig-meta");
+          break;
+        case "circle_token":
+          this.setOutput(true, "circ-meta");
+          break;
+        default:
+          this.setOutput(true, null);
+      }
+    } else {
+      this.setOutput(true, null);
     }
   },
   /**
