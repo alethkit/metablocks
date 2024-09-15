@@ -330,16 +330,68 @@ export function interpretBlock(prettyRepr, blockSet) {
               listBlock.render();
               input.connection.connect(listBlock.outputConnection);
             }
-          } //else if (input.name.includes('stmt_list_hole')) {
-          //       if (!input.connection.targetConnection) {
-          //        const statementsBlock = this.workspace.newBlock('controls_repeat_ext');
-          //        statementsBlock.initSvg();
-          //        statementsBlock.render();
-          //       input.connection.connect(statementsBlock.previousConnection);
-          //      }
-          //     }
+          }
         });
       },
+    };
+
+    javascriptGenerator.forBlock[block_name] = function (block) {
+      const blockName = block.getFieldValue("tok_0_string_value")
+        ? block.getFieldValue("tok_0_string_value")
+        : null;
+
+      const shapeBlock = block.getInputTargetBlock("tok_2_shape_primitive");
+      let shape = null; // Default to puzzle tab if no shape is connected
+      if (shapeBlock) {
+        switch (shapeBlock.type) {
+          case "square_token":
+            shape = "rect-meta";
+            break;
+          case "triangle_token":
+            shape = "trig-meta";
+            break;
+          case "circle_token":
+            shape = "circ-meta";
+            break;
+        }
+      }
+      let case_list = [];
+      let processed_case_list = [];
+      if (block_name.includes("l3rule")) {
+        //console.error(BANANANPEEEL); // ideally metaquotable
+        let list_block = block.getInputTargetBlock("tok_3_expr_list_hole");
+
+        let itemBlock = list_block.getInputTargetBlock("ADD0");
+        let i = 0;
+        while (itemBlock) {
+          if (itemBlock.type.includes("l3case")) {
+            case_list.push(itemBlock);
+          }
+          i++;
+          itemBlock = list_block.getInputTargetBlock("ADD" + i);
+        }
+        console.log(case_list);
+
+        for (const c of case_list) {
+          let tok_list = [];
+          let caselist_block = c.getInputTargetBlock("tok_0_expr_list_hole");
+          let tokenBlock = caselist_block.getInputTargetBlock("ADD0");
+          while (tokenBlock) {
+            tok_list.push(tokenBlock);
+            i++;
+            itemBlock = list_block.getInputTargetBlock("ADD" + i);
+          }
+          processed_case_list.push(tok_list);
+        }
+      }
+
+      const repr = {
+        block_type: block_name,
+        name: blockName,
+        shape: shape,
+        choices: processed_case_list,
+      };
+      return JSON.stringify(repr, null, 2);
     };
     blockSet.add(block_name);
   });
@@ -401,7 +453,7 @@ function processRuleBlock(rule, idNameMap) {
     }
   }
   const choices = processInputs(rule, idNameMap);
-  return { name: ruleName, shape, choices };
+  return { block_type: "rule_block", name: ruleName, shape, choices };
 }
 
 // Add code generation for rule_block
@@ -409,7 +461,7 @@ javascriptGenerator.forBlock["rule_block"] = function (block) {
   const variables = block.workspace.getAllVariables();
   const idNameMap = createIdNameMap(variables);
   const rule = processRuleBlock(block, idNameMap);
-  console.log("Rule block processed:", rule);
+  console.debug("Rule block processed:", rule);
   return JSON.stringify(rule, null, 2);
 };
 
