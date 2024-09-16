@@ -84,14 +84,18 @@ window.playground = createPlayground(
 
 BlockDynamicConnection.overrideOldBlockDefinitions();
 
-const ruleSelect = document.getElementById("ruleSelect");
+const ruleInput = document.getElementById("ruleInput");
+const ruleList = document.getElementById("ruleList");
 const interpreterButton = document.getElementById("interpreterButton");
 const refreshButton = document.getElementById("refreshButton");
 
 window.playground.then((playground) => {
   window.ws = playground.getWorkspace();
   window.ws.getAllVariables().forEach((rule) => {
-    ruleSelect.add(new Option(rule.name, rule.id_));
+    const option = document.createElement("option");
+    option.value = rule.name;
+    option.dataset.id = rule.id_;
+    ruleList.appendChild(option);
   });
   window.gen_blocks = new Set();
 
@@ -111,9 +115,12 @@ window.playground.then((playground) => {
 });
 
 refreshButton.addEventListener("click", () => {
-  ruleSelect.textContent = "";
+  ruleList.innerHTML = "";
   window.ws.getAllVariables().forEach((rule) => {
-    ruleSelect.add(new Option(rule.name, rule.id_));
+    const option = document.createElement("option");
+    option.value = rule.name;
+    option.dataset.id = rule.id_;
+    ruleList.appendChild(option);
   });
 });
 
@@ -122,7 +129,11 @@ refreshButton.addEventListener("click", () => {
 interpreterButton.addEventListener("click", () => {
   let selectedBlock = window.ws.getAllBlocks().find((b) => {
     let chosenField = b.getField("NAME") || b.getField("tok_0_string_value");
-    return chosenField.getValue() === ruleSelect.value;
+    return (
+      chosenField.getValue() === ruleInput.dataset.id ||
+      chosenField.getValue() === ruleInput.value ||
+      chosenField.selectedOption[0] === ruleInput.value
+    );
   });
   //console.log(selectedBlock);
   javascriptGenerator.init(window.ws); // Needs to be run first as initialiser???

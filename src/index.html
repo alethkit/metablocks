@@ -32,8 +32,9 @@
         </script>
 
         <h1>Hello!</h1>
-        <select id="ruleSelect">
-        </select>
+        <input list="ruleList" id="ruleInput" name="rule" placeholder="Select or type a rule">
+        <datalist id="ruleList">
+        </datalist>
         <button id="refreshButton">Refresh List</button>
         <button id="interpreterButton">Interpret This!</button>
         <div id="blocklyDiv" style="height: 480px; width: 70%;"></d>
