@@ -1,0 +1,196 @@
+{
+  "blocks": {
+    "languageVersion": 0,
+    "blocks": [
+      {
+        "type": "rule_block",
+        "id": "3U=i-r3m$cg7s:DiF#[?",
+        "x": 1,
+        "y": -123,
+        "extraState": { "itemCount": 1 },
+        "fields": { "NAME": { "id": "|X;:Pz2f^ND.VThDfKi3" } },
+        "inputs": {
+          "OPT0": {
+            "block": {
+              "type": "lists_create_with",
+              "id": "+J070-42~Hv$:(aQuh)(",
+              "extraState": { "itemCount": 3 },
+              "inputs": {
+                "ADD0": {
+                  "block": {
+                    "type": "primitive_hole",
+                    "id": "/TxykFK^dX]FS1V`f!2Z",
+                    "fields": { "type_dropdown": "Str" }
+                  }
+                },
+                "ADD1": {
+                  "block": {
+                    "type": "literal_rule",
+                    "id": "t*T)9d!VVH[pXlQz??}O",
+                    "inputs": {
+                      "Rer": {
+                        "block": {
+                          "type": "text",
+                          "id": "Kf?ucMP5e0}/Cj1cnCiH",
+                          "fields": { "TEXT": ":=" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "ADD2": {
+                  "block": {
+                    "type": "kleene_star",
+                    "id": "e`I1oIj%kEor=%kb#D^Z",
+                    "inputs": {
+                      "rule_name": {
+                        "block": {
+                          "type": "block_hole",
+                          "id": "vu`v%S4-8d/M5}c)J`ON",
+                          "inputs": {
+                            "rule_name": {
+                              "block": {
+                                "type": "variables_get_dynamic",
+                                "id": "_m~B+IV3pG|}bwNJ0kg(",
+                                "fields": {
+                                  "VAR": { "id": "q0t;g2N=~}8#B^b.pywL" }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "rule_block",
+        "id": "NbL3|c9EI3N.fWis*+vv",
+        "x": -9,
+        "y": 139,
+        "extraState": { "itemCount": 1 },
+        "fields": { "NAME": { "id": "q0t;g2N=~}8#B^b.pywL" } },
+        "inputs": {
+          "OPT0": {
+            "block": {
+              "type": "kleene_star",
+              "id": "UZ|bWime1[3+v|{.I[hB",
+              "inputs": {
+                "rule_name": {
+                  "block": {
+                    "type": "block_hole",
+                    "id": "v:OHm=jefr#^)3LL6A`A",
+                    "inputs": {
+                      "rule_name": {
+                        "block": {
+                          "type": "variables_get_dynamic",
+                          "id": "N-ia%iB%yDxcrg~)(6j!",
+                          "fields": { "VAR": { "id": "C;]X-v.m`8!}:[rUUcZq" } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "rule_block",
+        "id": "C!Baoi$f4f_SvzGL`SFJ",
+        "x": 43,
+        "y": 334,
+        "extraState": { "itemCount": 3 },
+        "fields": { "NAME": { "id": "C;]X-v.m`8!}:[rUUcZq" } },
+        "inputs": {
+          "OPT0": {
+            "block": {
+              "type": "primitive_hole",
+              "id": "eRBn9{3a{pX[Y/Rb,LTh",
+              "fields": { "type_dropdown": "Str" }
+            }
+          },
+          "OPT1": {
+            "block": {
+              "type": "block_hole",
+              "id": "+G_C~*PD?`;V:][H$lkt",
+              "inputs": {
+                "rule_name": {
+                  "block": {
+                    "type": "primitive_hole",
+                    "id": "6m37.;PV:KiDAEn,2ich",
+                    "fields": { "type_dropdown": "Str" }
+                  }
+                }
+              }
+            }
+          },
+          "OPT2": {
+            "block": {
+              "type": "lists_create_with",
+              "id": "`5uFEbM{dX7]osu3;tS`",
+              "extraState": { "itemCount": 2 },
+              "inputs": {
+                "ADD0": {
+                  "block": {
+                    "type": "block_hole",
+                    "id": "(+c!DjSLtEQr^Qgv/o,[",
+                    "inputs": {
+                      "rule_name": {
+                        "block": {
+                          "type": "variables_get_dynamic",
+                          "id": "Zmx@o^5:;R_j(Cq!N:6N",
+                          "fields": { "VAR": { "id": "C;]X-v.m`8!}:[rUUcZq" } }
+                        }
+                      }
+                    }
+                  }
+                },
+                "ADD1": {
+                  "block": {
+                    "type": "literal_rule",
+                    "id": "{waq~W23s$gh/R@uVuq$",
+                    "inputs": {
+                      "Rer": {
+                        "block": {
+                          "type": "text",
+                          "id": "e4e~T3*QOm/2j?z$-uo?",
+                          "fields": { "TEXT": "*" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "variables": [
+    { "name": "POLY", "id": "%;pxia1;jspA/U_Ho?|_" },
+    { "name": ":STEP", "id": "5?4nU,s7[e,R.u,zrFNY" },
+    { "name": ":ANGLE", "id": "+tt1/Htr()d|;X]7A$i@" },
+    { "name": "test-var", "id": "T-xDDzE]3A6lPvMRqH`|" },
+    { "name": "FORWARD", "id": "fwT^{IM%kMW8xqGNo%@L" },
+    { "name": "LEFT", "id": "{#}9hDML}|iDK`[4$0x{" },
+    { "name": "<varname>", "id": "qVlhMruQy18CI*I0^S,V", "type": "RULE" },
+    { "name": "<name>", "id": "{t|vT{?Kvl/w^LHe2em0", "type": "RULE" },
+    { "name": "<expr>", "id": "r]xuiOy6f=Sh2.6~}yr0", "type": "RULE" },
+    { "name": "<def>", "id": "A]FWFRI3ULe|0U9LT]K2", "type": "RULE" },
+    { "name": "<cmd>", "id": "(FVeOfA,YPvz^]la_eLU", "type": "RULE" },
+    { "name": "<prog>", "id": "HHKm+OGUWD;9W#[aO?[,", "type": "RULE" },
+    { "name": "item", "id": "dKb;X~xg0).h.;|TAK{V", "type": "RULE" },
+    { "name": "ghjgjh", "id": "#!SDZPH.lJzZV8fey]%*", "type": "RULE" },
+    { "name": "l3rule", "id": "|X;:Pz2f^ND.VThDfKi3", "type": "RULE" },
+    { "name": "l3case", "id": "q0t;g2N=~}8#B^b.pywL", "type": "RULE" },
+    { "name": "l3tok", "id": "C;]X-v.m`8!}:[rUUcZq", "type": "RULE" }
+  ]
+}
