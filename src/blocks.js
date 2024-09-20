@@ -19,6 +19,12 @@ const SHAPE_OUTPUT_TYPES = {
   [SHAPE_TYPES.CIRCLE]: "circ-meta",
 };
 
+// OR & AND block (sum and product)
+Blockly.common.defineBlocks({
+  ["or_block"]: {},
+  ["and_block"]: {},
+});
+
 // Shape casting
 Blockly.defineBlocksWithJsonArray([
   {
@@ -71,30 +77,7 @@ Blockly.defineBlocksWithJsonArray([
     type: "rule_block",
     tooltip: "",
     helpUrl: "",
-    /*   message0: "%1 := %2 %3",
-    args0: [
-      {
-        type: "input_value",
-        name: "SHAPE",
-      },
-      {
-        type: "field_variable",
-        name: "NAME",
-        variable: "<rule>",
-        variableTypes: ["RULE"],
-        defaultType: "RULE",
-      },
-      {
-        type: "input_dummy",
-        name: "assign_symbol",
-      },
-      {
-        type: "input_value",
-        name: "choices",
-        check: "Array",
-      },
-    ],*/
-    mutator: ["dynamic_connector_extension"],
+    mutator: ["dynamic_connector_extension_rule"],
     colour: 225,
   },
   {
@@ -248,6 +231,7 @@ function createBlockDefinition(prettyRepr, choice, choiceIndex) {
 
     appendTokenInputs: function (tokens) {
       tokens.forEach((token, j) => {
+        //  console.log(`testing testing brrrrr ${j}`);
         const inputFunction = this.getInputFunction(token);
         inputFunction.call(this, token, j);
       });
@@ -290,17 +274,19 @@ function createBlockDefinition(prettyRepr, choice, choiceIndex) {
       primitiveInputs[token.value]();
     },
 
-    appendHoleInput: function (j) {
+    // Despite unused arg, function sigs must remain the same
+    appendHoleInput: function (token, j) {
       this.appendValueInput(`tok_${j}_hole`).setCheck("RULE");
     },
 
-    appendExprListHoleInput: function (j) {
+    appendExprListHoleInput: function (token, j) {
+      console.log(`hmmm ${j}`);
       this.appendValueInput(`tok_${j}_expr_list_hole`)
         .setCheck("Array")
         .appendField("*");
     },
 
-    appendStmtListHoleInput: function (j) {
+    appendStmtListHoleInput: function (token, j) {
       this.appendStatementInput(`tok_${j}_stmt_list_hole`).appendField("*stmt");
     },
 
@@ -347,14 +333,16 @@ function createBlockGenerator(block_name) {
     }
 
     const repr = {
-      block_type: block_name,
       name: blockName,
       shape: shape,
       choices: processed_case_list,
     };
+    //console.log(repr); //we're not actually turning l3tok blocks into their IR'
     return JSON.stringify(repr, null, 2);
   };
 }
+
+//TODO: get below to work with the generated block???
 
 function processL3Rule(block) {
   const list_block = block.getInputTargetBlock("tok_3_expr_list_hole");
@@ -374,11 +362,19 @@ function processL3Rule(block) {
     let caselist_block = c.getInputTargetBlock("tok_0_expr_list_hole");
     let tokenBlock = caselist_block.getInputTargetBlock("ADD0");
     while (tokenBlock) {
-      tok_list.push(tokenBlock);
+      // wrongly assuming tokens are the nicely represented ones with sane IR, and
+      //not ones result of metaprogramming
+      const tokIR = getTokenIR(tokenBlock);
+      tok_list.push(tokIR);
       tokenBlock = caselist_block.getInputTargetBlock("ADD" + tok_list.length);
     }
     return tok_list;
   });
+}
+
+function getTokenIR(token) {
+  if (token.type.includes("l3tok")) {
+  }
 }
 
 // Process inputs for a rule
@@ -502,6 +498,8 @@ export const category = {
     { kind: "BLOCK", type: "triangle_token" },
     { kind: "BLOCK", type: "circle_token" },
     { kind: "BLOCK", type: "rule_block" },
+    { kind: "BLOCK", type: "sum_type_block" },
+    { kind: "BLOCK", type: "product_type_block" },
     { kind: "BLOCK", type: "literal_rule" },
     { kind: "BLOCK", type: "primitive_hole" },
     { kind: "BLOCK", type: "block_hole" },
@@ -725,10 +723,201 @@ const dynamicConnectorMixin = {
   },
 };
 
-Blockly.Extensions.registerMutator(
-  "dynamic_connector_extension",
-  dynamicConnectorMixin,
-  function () {
+const minimalDynamicConnectorMixin = {
+  minInputs: 1,
+  itemCount: 0,
+
+  saveExtraState: function () {
+    if (!this.isDeadOrDying() && !this.isCorrectlyFormatted()) {
+      this.safelyFinalizeConnections();
+    }
+    return { itemCount: this.itemCount };
+  },
+
+  loadExtraState: function (state) {
+    this.itemCount = state.itemCount ?? 0;
+    this.addOptionalInputs();
+  },
+
+  findInputIndexForConnection: function (connection) {
+    if (this.isConnectionAvailable(connection)) {
+      return null;
+    }
+
+    const connectionIndex = this.getConnectionIndex(connection);
+    if (connectionIndex === this.inputList.length - 1) {
+      return this.inputList.length + 1;
+    }
+
+    return this.shouldAddNewConnection(connectionIndex)
+      ? connectionIndex + 1
+      : null;
+  },
+
+  onPendingConnection: function (connection) {
+    const insertIndex = this.findInputIndexForConnection(connection);
+    if (
+      insertIndex !== null &&
+      connection !== this.getInput("SHAPE").connection
+    ) {
+      this.appendValueInput(`OPT${Blockly.utils.idGenerator.genUid()}`);
+      this.moveNumberedInputBefore(this.inputList.length - 1, insertIndex);
+    }
+  },
+
+  finalizeConnections: function () {
+    try {
+      const { shapeConn, targetConns } = this.getConnectionsData();
+      this.addItemInputs(targetConns, shapeConn);
+      this.itemCount = targetConns.length;
+      this.setOutputBasedOnShape(shapeConn);
+    } catch (e) {
+      console.error("Error in finalizeConnections:", e);
+      this.restoreToValidState();
+    }
+  },
+
+  tearDownBlock: function () {
+    this.inputList
+      .slice()
+      .reverse()
+      .forEach((input) => this.removeInput(input.name));
+  },
+
+  removeUnnecessaryEmptyConns: function (targetConns) {
+    return targetConns.filter(
+      (conn, index, array) => conn || array.length <= this.minInputs,
+    );
+  },
+
+  addItemInputs: function (targetConns, shapeConn) {
+    if (!Array.isArray(targetConns)) {
+      console.warn("Invalid targetConns in addItemInputs");
+      return;
+    }
+
+    this.removeNonEssentialInputs();
+    this.ensureShapeInput(shapeConn);
+    //this.ensureAssignSymbolInput();
+    this.addTargetConnections(targetConns);
+    this.setOutputTypeBasedOnShape(shapeConn);
+  },
+
+  isCorrectlyFormatted: function () {
+    return this.inputList.every((input, index) => input.name === `OPT${index}`);
+  },
+
+  // Helper methods
+  safelyFinalizeConnections: function () {
+    Blockly.Events.disable();
+    this.finalizeConnections();
+    if (this instanceof Blockly.BlockSvg) this.initSvg();
+    Blockly.Events.enable();
+  },
+
+  addOptionalInputs: function () {
+    for (let i = this.minInputs; i < this.itemCount; i++) {
+      this.appendValueInput("OPT" + i);
+    }
+  },
+
+  isConnectionAvailable: function (connection) {
+    return (
+      !connection.targetConnection ||
+      connection.targetBlock()?.isInsertionMarker()
+    );
+  },
+
+  getConnectionIndex: function (connection) {
+    return this.inputList.findIndex((input) => input.connection === connection);
+  },
+
+  shouldAddNewConnection: function (connectionIndex) {
+    const nextInput = this.inputList[connectionIndex + 1];
+    const nextConnection = nextInput?.connection?.targetConnection;
+    return (
+      nextConnection && !nextConnection.getSourceBlock().isInsertionMarker()
+    );
+  },
+
+  getConnectionsData: function () {
+    const shapeInput = this.getInput("SHAPE");
+    const shapeConn = shapeInput
+      ? shapeInput.connection.targetConnection
+      : null;
+    const targetConns = this.removeUnnecessaryEmptyConns(
+      this.inputList
+        .filter(
+          (input) => input.name !== "assign_symbol" && input.name !== "SHAPE",
+        )
+        .map((i) => i.connection?.targetConnection),
+    );
+    return { shapeConn, targetConns };
+  },
+
+  setOutputBasedOnShape: function (shapeConn) {
+    this.setOutput(true, shapeConn ? null : null);
+  },
+
+  restoreToValidState: function () {
+    this.addItemInputs([], null);
+    this.setOutput(true, null);
+  },
+
+  removeNonEssentialInputs: function () {
+    this.inputList
+      .slice()
+      .reverse()
+      .forEach((input) => {
+        if (input.name !== "assign_symbol" && input.name !== "SHAPE") {
+          this.removeInput(input.name);
+        }
+      });
+  },
+
+  ensureShapeInput: function (shapeConn) {
+    if (!this.getInput("SHAPE")) {
+      this.appendValueInput("SHAPE").appendField("Shape:");
+    }
+    if (shapeConn && this.getInput("SHAPE").connection) {
+      this.getInput("SHAPE").connection.connect(shapeConn);
+    }
+  },
+
+  ensureAssignSymbolInput: function () {
+    if (!this.getInput("assign_symbol")) {
+      this.appendDummyInput("assign_symbol")
+        .appendField(new Blockly.FieldTextInput("ruleName"), "NAME")
+        .appendField(":=");
+    }
+  },
+
+  addTargetConnections: function (targetConns) {
+    targetConns.forEach((targetConn, i) => {
+      const input = this.appendValueInput(`OPT${i}`);
+      if (targetConn && input && input.connection) {
+        try {
+          input.connection.connect(targetConn);
+        } catch (e) {
+          console.error(`Failed to connect input ${i}:`, e);
+        }
+      }
+    });
+  },
+
+  setOutputTypeBasedOnShape: function (shapeConn) {
+    if (shapeConn) {
+      const shapeType = shapeConn.getSourceBlock().type;
+      const outputType = SHAPE_OUTPUT_TYPES[shapeType] || null;
+      this.setOutput(true, outputType);
+    } else {
+      this.setOutput(true, null);
+    }
+  },
+};
+
+function createDynamicConnectorExtension(blockType) {
+  return function () {
     this.itemCount = this.minInputs;
     this.appendDummyInput("assign_symbol")
       .appendField(
@@ -736,8 +925,87 @@ Blockly.Extensions.registerMutator(
         "NAME",
       )
       .appendField(":=");
+
+    if (blockType === "sum_type") {
+      this.appendDummyInput().appendField("Sum Type");
+    } else if (blockType === "product_type") {
+      this.appendDummyInput().appendField("Product Type");
+    }
+
     for (let i = 0; i < this.minInputs; i++) {
       this.appendValueInput(`OPT${i}`);
     }
-  },
+  };
+}
+
+function createMinimalDynamicConnectorExtension(blockType) {
+  return function () {
+    this.itemCount = this.minInputs;
+
+    if (blockType === "sum_type") {
+      this.appendDummyInput().appendField("Sum Type");
+    } else if (blockType === "product_type") {
+      this.appendDummyInput().appendField("Product Type");
+    }
+
+    for (let i = 0; i < this.minInputs; i++) {
+      this.appendValueInput(`OPT${i}`);
+    }
+  };
+}
+
+Blockly.Extensions.registerMutator(
+  "dynamic_connector_extension_rule",
+  dynamicConnectorMixin,
+  createDynamicConnectorExtension("rule"),
 );
+
+Blockly.Extensions.registerMutator(
+  "dynamic_connector_extension_sum",
+  minimalDynamicConnectorMixin,
+  createMinimalDynamicConnectorExtension("sum_type"),
+);
+
+Blockly.Extensions.registerMutator(
+  "dynamic_connector_extension_product",
+  minimalDynamicConnectorMixin,
+  createMinimalDynamicConnectorExtension("product_type"),
+);
+
+Blockly.Blocks["sum_type_block"] = {
+  init: function () {
+    this.jsonInit({
+      type: "sum_type_block",
+      message0: "Sum Type %1",
+      args0: [
+        {
+          type: "input_dummy",
+        },
+      ],
+      colour: 230,
+      tooltip: "Sum type block",
+      helpUrl: "",
+      mutator: "dynamic_connector_extension_sum",
+      output: "sum-meta",
+    });
+  },
+};
+
+Blockly.Blocks["product_type_block"] = {
+  init: function () {
+    this.jsonInit({
+      type: "product_type_block",
+      message0: "Product Type %1",
+      args0: [
+        {
+          type: "input_dummy",
+        },
+      ],
+      colour: 290,
+      tooltip: "Product type block",
+      helpUrl: "",
+      mutator: "dynamic_connector_extension_product",
+      output: "product-meta",
+    });
+  },
+};
