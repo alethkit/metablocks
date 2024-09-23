@@ -13,6 +13,7 @@ import {
   createFlyout,
   interpretBlock,
   interpretYuckyBlock,
+  serialiseBlock,
 } from "./blocks";
 
 Blockly.setLocale(En);
@@ -88,6 +89,18 @@ const ruleInput = document.getElementById("ruleInput");
 const ruleList = document.getElementById("ruleList");
 const interpreterButton = document.getElementById("interpreterButton");
 const refreshButton = document.getElementById("refreshButton");
+const serialiseButton = document.getElementById("serialiseButton");
+const blockIdSelect = document.getElementById("blockIdSelect");
+
+function updateBlockIdDropdown() {
+  blockIdSelect.innerHTML = '<option value="">Select a block ID</option>';
+  window.ws.getAllBlocks().forEach((block) => {
+    const option = document.createElement("option");
+    option.value = block.id;
+    option.textContent = `${block.type} (${block.id})`;
+    blockIdSelect.appendChild(option);
+  });
+}
 
 window.playground.then((playground) => {
   window.ws = playground.getWorkspace();
@@ -112,6 +125,16 @@ window.playground.then((playground) => {
     "GENERATED_BLOCKS",
     genBlockCallback,
   );
+
+  updateBlockIdDropdown();
+  window.ws.addChangeListener((event) => {
+    if (
+      event.type === Blockly.Events.BLOCK_CREATE ||
+      event.type === Blockly.Events.BLOCK_DELETE
+    ) {
+      updateBlockIdDropdown();
+    }
+  });
 });
 
 refreshButton.addEventListener("click", () => {
@@ -144,5 +167,21 @@ interpreterButton.addEventListener("click", () => {
   } catch (err) {
     console.log(err);
     interpretYuckyBlock(selectedBlock, window.gen_blocks);
+  }
+});
+
+serialiseButton.addEventListener("click", () => {
+  const workspace = window.ws;
+  const selectedBlockId = blockIdSelect.value;
+  if (selectedBlockId) {
+    const selectedBlock = workspace.getBlockById(selectedBlockId);
+    if (selectedBlock) {
+      const serialisedBlock = serialiseBlock(selectedBlock);
+      console.log(JSON.stringify(serialisedBlock, null, 2));
+    } else {
+      console.log("Selected block not found");
+    }
+  } else {
+    console.log("No block ID selected");
   }
 });

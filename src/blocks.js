@@ -33,7 +33,7 @@ Blockly.defineBlocksWithJsonArray([
     args0: [
       {
         type: "input_value",
-        name: "circ-in",
+        name: "circ_in",
         check: ["circ-meta"],
       },
     ],
@@ -45,7 +45,7 @@ Blockly.defineBlocksWithJsonArray([
     args0: [
       {
         type: "input_value",
-        name: "trig-in",
+        name: "trig_in",
         check: ["trig-meta"],
       },
     ],
@@ -499,6 +499,8 @@ export const category = {
     { kind: "BLOCK", type: "circle_token" },
     { kind: "BLOCK", type: "rule_block" },
     { kind: "BLOCK", type: "sum_type_block" },
+    { kind: "BLOCK", type: "inertsum_type_block" },
+
     { kind: "BLOCK", type: "product_type_block" },
     { kind: "BLOCK", type: "literal_rule" },
     { kind: "BLOCK", type: "primitive_hole" },
@@ -508,6 +510,89 @@ export const category = {
   ],
   colour: 70,
 };
+
+export function serialiseBlock(block) {
+  const type = block.type;
+  const fields = {};
+  const inputs = {};
+
+  // Process fields
+  for (const fieldName in block.fieldMap_) {
+    fields[fieldName] = block.getFieldValue(fieldName);
+  }
+
+  // Process inputs
+  for (const inputName in block.inputList) {
+    const input = block.getInput(inputName);
+    if (input && input.connection && input.connection.targetBlock()) {
+      inputs[inputName] = serialiseBlock(input.connection.targetBlock());
+    }
+  }
+
+  // Generate IR based on block type
+  switch (type) {
+    case "circ_to_trig_cast":
+      return {
+        type: "CircleToTriangle",
+        input: inputs.CIRC_IN,
+      };
+
+    case "rule_block":
+      return {
+        type: "Rule",
+        name: fields.NAME,
+        shape: inputs.SHAPE ? inputs.SHAPE.type : null,
+        choices: Object.values(inputs).filter(
+          (input) => input.type !== "Shape",
+        ),
+      };
+    case "sum_type_block":
+      return {
+        type: "SumType",
+        choices: Object.values(inputs).filter(
+          (input) => input.type !== "Shape",
+        ),
+      };
+    case "product_type_block":
+      return {
+        type: "ProductType",
+        fields: Object.values(inputs).filter((input) => input.type !== "Shape"),
+      };
+    case "literal_rule":
+      return {
+        type: "Literal",
+        value: fields.TEXT,
+      };
+    case "primitive_hole":
+      return {
+        type: "Primitive",
+        primitiveType: fields.type_dropdown,
+      };
+    case "block_hole":
+      return {
+        type: "Hole",
+        ruleName: inputs.rule_name ? inputs.rule_name.name : null,
+      };
+    case "kleene_star":
+      return {
+        type: "KleeneStar",
+        expression: inputs.rule_name,
+      };
+    case "kleene_star_stmt":
+      return {
+        type: "KleeneStarStmt",
+        statement: inputs.rule_name,
+      };
+    case "square_token":
+      return { type: "Shape", shape: "Square" };
+    case "triangle_token":
+      return { type: "Shape", shape: "Triangle" };
+    case "circle_token":
+      return { type: "Shape", shape: "Circle" };
+    default:
+      return { type: type, fields: fields, inputs: inputs };
+  }
+}
 
 export const rulesCat = {
   kind: "category",
@@ -725,8 +810,18 @@ const dynamicConnectorMixin = {
 
 const minimalDynamicConnectorMixin = {
   minInputs: 1,
-  itemCount: 0,
+  itemCount: 0, // Problem: the shape token is being counted as an item input!
 
+  // I don't think it  makes sense to have a shape input for the sum/product types
+  // (shape inherited from constituent blocks?)
+  //
+  //TODO: adding inputs seems to ignore the shape block (so min1 means at lest 1 non shape input exists
+  //, but removing of additional inputs counts the shape 1 as an input (so min1 means no actual inputs)
+
+  // repeatedly clicking when mininputs is set to 2 iterates between 2,1, adn 0 inputs???
+  //
+  // n set to 3 implies that the pattern is n,1,0 input holes
+  // item count is *actually* being altered by the clicks
   saveExtraState: function () {
     if (!this.isDeadOrDying() && !this.isCorrectlyFormatted()) {
       this.safelyFinalizeConnections();
@@ -769,7 +864,7 @@ const minimalDynamicConnectorMixin = {
     try {
       const { shapeConn, targetConns } = this.getConnectionsData();
       this.addItemInputs(targetConns, shapeConn);
-      this.itemCount = targetConns.length;
+      this.itemCount = targetConns.length; // TODO: altter conns here to ignore shape
       this.setOutputBasedOnShape(shapeConn);
     } catch (e) {
       console.error("Error in finalizeConnections:", e);
@@ -797,14 +892,19 @@ const minimalDynamicConnectorMixin = {
     }
 
     this.removeNonEssentialInputs();
+    this.ensureTitleInput();
     this.ensureShapeInput(shapeConn);
     //this.ensureAssignSymbolInput();
     this.addTargetConnections(targetConns);
+    this.addOptionalInputs();
     this.setOutputTypeBasedOnShape(shapeConn);
   },
 
   isCorrectlyFormatted: function () {
-    return this.inputList.every((input, index) => input.name === `OPT${index}`);
+    // console.log(this.inputList); /// shows that shape is indeed counted, so thtis will be false
+    return this.inputList
+      .filter((input) => input.name !== "TITLE" && input.name !== "SHAPE")
+      .every((input, index) => input.name === `OPT${index}`);
   },
 
   // Helper methods
@@ -816,7 +916,7 @@ const minimalDynamicConnectorMixin = {
   },
 
   addOptionalInputs: function () {
-    for (let i = this.minInputs; i < this.itemCount; i++) {
+    for (let i = this.itemCount; i < this.minInputs; i++) {
       this.appendValueInput("OPT" + i);
     }
   },
@@ -847,9 +947,7 @@ const minimalDynamicConnectorMixin = {
       : null;
     const targetConns = this.removeUnnecessaryEmptyConns(
       this.inputList
-        .filter(
-          (input) => input.name !== "assign_symbol" && input.name !== "SHAPE",
-        )
+        .filter((input) => input.name !== "SHAPE")
         .map((i) => i.connection?.targetConnection),
     );
     return { shapeConn, targetConns };
@@ -869,7 +967,8 @@ const minimalDynamicConnectorMixin = {
       .slice()
       .reverse()
       .forEach((input) => {
-        if (input.name !== "assign_symbol" && input.name !== "SHAPE") {
+        if (input.name !== "TITLE" && input.name !== "SHAPE") {
+          // no swap of title
           this.removeInput(input.name);
         }
       });
@@ -881,6 +980,14 @@ const minimalDynamicConnectorMixin = {
     }
     if (shapeConn && this.getInput("SHAPE").connection) {
       this.getInput("SHAPE").connection.connect(shapeConn);
+    }
+  },
+
+  ensureTitleInput: function () {
+    if (!this.getInput("TITLE")) {
+      const titleText =
+        this.type === "sum_type_block" ? "Sum Type" : "Product Type";
+      this.appendDummyInput("TITLE").appendField(titleText);
     }
   },
 
@@ -976,17 +1083,27 @@ Blockly.Blocks["sum_type_block"] = {
   init: function () {
     this.jsonInit({
       type: "sum_type_block",
-      message0: "Sum Type %1",
-      args0: [
-        {
-          type: "input_dummy",
-        },
-      ],
+      message0: "Sum Type",
       colour: 230,
       tooltip: "Sum type block",
       helpUrl: "",
       mutator: "dynamic_connector_extension_sum",
-      output: "sum-meta",
+      // output: "sum-meta",
+      inputsInline: false,
+    });
+  },
+};
+
+Blockly.Blocks["inertsum_type_block"] = {
+  init: function () {
+    this.jsonInit({
+      type: "sum_type_block",
+      message0: "Sum Type",
+      colour: 230,
+      tooltip: "Sum type block",
+      helpUrl: "",
+      output: null,
+      inputsInline: false,
     });
   },
 };
@@ -995,17 +1112,13 @@ Blockly.Blocks["product_type_block"] = {
   init: function () {
     this.jsonInit({
       type: "product_type_block",
-      message0: "Product Type %1",
-      args0: [
-        {
-          type: "input_dummy",
-        },
-      ],
+      message0: "Product Type",
       colour: 290,
       tooltip: "Product type block",
       helpUrl: "",
       mutator: "dynamic_connector_extension_product",
-      output: "product-meta",
+      // output: "product-meta",
+      inputsInline: false,
     });
   },
 };
