@@ -12,7 +12,6 @@ import {
   rulesCat,
   createFlyout,
   interpretBlock,
-  interpretYuckyBlock,
   serialiseBlock,
 } from "./blocks";
 
@@ -166,7 +165,6 @@ interpreterButton.addEventListener("click", () => {
     interpretBlock(JSON.parse(generatedCode), window.gen_blocks);
   } catch (err) {
     console.log(err);
-    interpretYuckyBlock(selectedBlock, window.gen_blocks);
   }
 });
 
