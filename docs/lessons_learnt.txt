@@ -1,0 +1,18 @@
+Trivial inconveniences stack up quickly,prevent iteration
+
+Top down block reduction was easier at first, but it did not scale.
+Think in terms of smaller primitives first.
+
+making a simpler IR was a good idea, but now figuring out a consistent serialisation
+procedure for all blocks makes more sense (particularly if you want to extend it)
+
+Typing with autocompletion (using the <datalist> element)
+is more convenient than using a <select> dropdown box
+
+The biggest trivial inconvenience so far is the CSS: easiest way to get out of a flow state
+
+Unsurprisingly, having someone else to explain what you're working on helps in solidifying an
+idea!
+
+Drawing, sketches are very good (unless you actually have vivid mental imagery, in which case,
+ignore this)
