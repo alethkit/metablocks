@@ -1,7 +1,7 @@
 import * as Blockly from "blockly/core";
 import { javascriptGenerator } from "blockly/javascript";
 
-import "../blocks.js";
+import { createIdNameMap, processRuleBlock } from "../blocks.js";
 
 // Add code generation for rule_block
 javascriptGenerator.forBlock["rule_block"] = function (block) {

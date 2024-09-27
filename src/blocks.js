@@ -278,7 +278,7 @@ export function processInputs(block, idNameMap) {
     .filter(Boolean);
 }
 
-function createIdNameMap(variables) {
+export function createIdNameMap(variables) {
   return new Map(variables.map((entry) => [entry.id_, entry.name]));
 }
 
