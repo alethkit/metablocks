@@ -1,5 +1,10 @@
 # metablocks
 
+
+## Getting Started
+
+
+
 To install dependencies:
 
 ```bash
@@ -19,6 +24,8 @@ To run:
 bun run start
 ```
 
+
+## Saving and Loading
 loading back state:
 
 copypaste `dump.json` contents into console as var `dump`
